@@ -13,6 +13,7 @@ type AuthState = {
   hydrated: boolean;
   hydrate: () => Promise<void>;
   setSession: (token: string, user: ApiUser, profile: ApiStudentProfile) => Promise<void>;
+  updateProfile: (profile: ApiStudentProfile) => Promise<void>;
   clearSession: () => Promise<void>;
 };
 
@@ -43,6 +44,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     ]);
 
     set({ token, user, profile, hydrated: true });
+  },
+  updateProfile: async (profile) => {
+    await SecureStore.setItemAsync(PROFILE_KEY, JSON.stringify(profile));
+    set((state) => ({ ...state, profile }));
   },
   clearSession: async () => {
     await Promise.all([

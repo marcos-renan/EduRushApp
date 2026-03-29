@@ -20,6 +20,14 @@ export type LoginResponse = {
   student_profile: ApiStudentProfile;
 };
 
+export type RegisterPayload = {
+  name: string;
+  email: string;
+  password: string;
+  password_confirmation: string;
+  grade_year?: number;
+};
+
 export type TrailLesson = {
   external_id: string;
   title: string;
@@ -110,5 +118,43 @@ export type LessonQuestionsResponse = {
   };
   meta: {
     total_questions: number;
+  };
+};
+
+export type LessonAttemptPayload = {
+  answers: Array<{
+    question_external_id: string;
+    selected_option: number;
+  }>;
+};
+
+export type LessonAttemptResponse = {
+  data: {
+    lesson: {
+      external_id: string;
+      slug: string;
+      title: string;
+    };
+    quiz: {
+      total_questions: number;
+      answered_questions: number;
+      correct_answers: number;
+      score: number;
+    };
+    progress: {
+      already_completed: boolean;
+      earned_xp: number;
+    };
+    student_profile: ApiStudentProfile;
+    completed_missions: Array<{
+      title: string;
+      reward_xp: number;
+      mission_type: string;
+    }>;
+    unlocked_badges: Array<{
+      name: string;
+      icon?: string;
+      color_hex?: string;
+    }>;
   };
 };
