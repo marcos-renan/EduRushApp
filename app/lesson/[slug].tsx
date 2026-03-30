@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAudioPlayer } from "expo-audio";
 import { router, useLocalSearchParams } from "expo-router";
 import LottieView from "lottie-react-native";
 import { useMemo, useState } from "react";
@@ -25,6 +26,23 @@ export default function LessonQuestionsScreen() {
   const [checkedByQuestion, setCheckedByQuestion] = useState<Record<string, boolean>>({});
   const [isCorrectByQuestion, setIsCorrectByQuestion] = useState<Record<string, boolean>>({});
   const [result, setResult] = useState<LessonAttemptResponse["data"] | null>(null);
+  const correctPlayer = useAudioPlayer(require("../../assets/sounds/correct.mpeg"), {
+    keepAudioSessionActive: true,
+  });
+  const wrongPlayer = useAudioPlayer(require("../../assets/sounds/wrong.mpeg"), {
+    keepAudioSessionActive: true,
+  });
+
+  const playCheckSound = async (isCorrect: boolean) => {
+    const player = isCorrect ? correctPlayer : wrongPlayer;
+
+    try {
+      await player.seekTo(0);
+      player.play();
+    } catch (error) {
+      console.warn("Nao foi possivel tocar o som de feedback.", error);
+    }
+  };
 
   const questionsQuery = useQuery({
     queryKey: ["lesson-questions", slug, token],
@@ -88,6 +106,8 @@ export default function LessonQuestionsScreen() {
         ...prev,
         [currentQuestion.external_id]: answerIsCorrect,
       }));
+
+      void playCheckSound(answerIsCorrect);
       return;
     }
 
@@ -264,7 +284,7 @@ export default function LessonQuestionsScreen() {
                       backgroundColor: isCurrentChecked
                         ? isCurrentCorrect
                           ? "#2f855a"
-                          : "#c53030"
+                          : "#de5a5a"
                         : colors.primary,
                     },
                     (selectedOption === undefined || submitMutation.isPending) && styles.primaryButtonDisabled,
