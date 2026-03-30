@@ -2,13 +2,15 @@ import { LinearGradient } from "expo-linear-gradient";
 import type { PropsWithChildren } from "react";
 import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { gradient, palette } from "../theme/palette";
+import { useAppTheme } from "../theme/app-theme";
 
 export function GradientScreen({ children }: PropsWithChildren) {
+  const { colors, gradientColors } = useAppTheme();
+
   return (
-    <LinearGradient colors={gradient} style={styles.gradient}>
+    <LinearGradient colors={gradientColors} style={styles.gradient}>
       <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}>
-        <View style={styles.content}>{children}</View>
+        <View style={[styles.content, { backgroundColor: colors.contentBackground }]}>{children}</View>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -23,7 +25,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    backgroundColor: palette.blue100,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: "hidden",

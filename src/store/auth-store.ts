@@ -10,9 +10,11 @@ type AuthState = {
   token: string | null;
   user: ApiUser | null;
   profile: ApiStudentProfile | null;
+  profilePhotoVersion: number;
   hydrated: boolean;
   hydrate: () => Promise<void>;
   setSession: (token: string, user: ApiUser, profile: ApiStudentProfile) => Promise<void>;
+  updateUser: (user: ApiUser) => Promise<void>;
   updateProfile: (profile: ApiStudentProfile) => Promise<void>;
   clearSession: () => Promise<void>;
 };
@@ -21,6 +23,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   user: null,
   profile: null,
+  profilePhotoVersion: 0,
   hydrated: false,
   hydrate: async () => {
     const [token, rawUser, rawProfile] = await Promise.all([
@@ -33,6 +36,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       token: token ?? null,
       user: rawUser ? (JSON.parse(rawUser) as ApiUser) : null,
       profile: rawProfile ? (JSON.parse(rawProfile) as ApiStudentProfile) : null,
+      profilePhotoVersion: Date.now(),
       hydrated: true,
     });
   },
@@ -43,7 +47,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       SecureStore.setItemAsync(PROFILE_KEY, JSON.stringify(profile)),
     ]);
 
-    set({ token, user, profile, hydrated: true });
+    set({ token, user, profile, profilePhotoVersion: Date.now(), hydrated: true });
+  },
+  updateUser: async (user) => {
+    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+    set((state) => ({ ...state, user, profilePhotoVersion: Date.now() }));
   },
   updateProfile: async (profile) => {
     await SecureStore.setItemAsync(PROFILE_KEY, JSON.stringify(profile));
@@ -56,6 +64,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       SecureStore.deleteItemAsync(PROFILE_KEY),
     ]);
 
-    set({ token: null, user: null, profile: null, hydrated: true });
+    set({ token: null, user: null, profile: null, profilePhotoVersion: 0, hydrated: true });
   },
 }));

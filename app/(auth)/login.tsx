@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -20,7 +21,8 @@ import { z } from "zod";
 import { extractApiError } from "../../src/services/api/client";
 import { loginRequest } from "../../src/services/api/auth";
 import { useAuthStore } from "../../src/store/auth-store";
-import { gradient, palette } from "../../src/theme/palette";
+import { useAppTheme } from "../../src/theme/app-theme";
+import { palette } from "../../src/theme/palette";
 
 const schema = z.object({
   email: z.string().email("Digite um e-mail valido."),
@@ -28,11 +30,11 @@ const schema = z.object({
 });
 
 type LoginFormData = z.infer<typeof schema>;
-const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
 
 export default function LoginScreen() {
   const setSession = useAuthStore((state) => state.setSession);
   const [showPassword, setShowPassword] = useState(false);
+  const { colors, gradientColors, isDark } = useAppTheme();
 
   const {
     control,
@@ -55,7 +57,7 @@ export default function LoginScreen() {
   });
 
   return (
-    <LinearGradient colors={gradient} style={styles.container}>
+    <LinearGradient colors={gradientColors} style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.select({ ios: "padding", android: "height" })}
         keyboardVerticalOffset={Platform.select({ ios: 24, android: 0 })}
@@ -67,18 +69,26 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.hero}>
-            <Text style={styles.logo}>EduRush</Text>
+            <Image
+              source={
+                isDark
+                  ? require("../../assets/branding/edurush-dark.png")
+                  : require("../../assets/branding/edurush-light.png")
+              }
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
             <Text style={styles.subtitle}>Seu app gamificado para o ensino medio.</Text>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.title}>Entrar na conta</Text>
-            <Text style={styles.description}>
-              Use seu login de aluno para acessar trilhas, missoes e questoes.
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>Entrar na conta</Text>
+            <Text style={[styles.description, { color: colors.textSecondary }]}>
+              Use seu login de aluno para acessar materias, trilhas, missoes e questoes.
             </Text>
 
             <View style={styles.field}>
-              <Text style={styles.label}>E-mail</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>E-mail</Text>
               <Controller
                 control={control}
                 name="email"
@@ -90,8 +100,8 @@ export default function LoginScreen() {
                     onChangeText={onChange}
                     value={value}
                     placeholder="aluno@edurush.com"
-                    placeholderTextColor={palette.slate500}
-                    style={styles.input}
+                    placeholderTextColor={colors.textMuted}
+                    style={[styles.input, { borderColor: colors.border, backgroundColor: colors.inputBackground, color: colors.inputText }]}
                     returnKeyType="next"
                   />
                 )}
@@ -100,20 +110,22 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Senha</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>Senha</Text>
               <Controller
                 control={control}
                 name="password"
                 render={({ field: { onChange, onBlur, value } }) => (
-                  <View style={styles.passwordWrapper}>
+                  <View style={[styles.passwordWrapper, { borderColor: colors.border, backgroundColor: colors.inputBackground }]}>
                     <TextInput
                       secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
                       onBlur={onBlur}
                       onChangeText={onChange}
                       value={value}
                       placeholder="******"
-                      placeholderTextColor={palette.slate500}
-                      style={styles.passwordInput}
+                      placeholderTextColor={colors.textMuted}
+                      style={[styles.passwordInput, { color: colors.inputText }]}
                       returnKeyType="done"
                     />
                     <Pressable
@@ -126,7 +138,7 @@ export default function LoginScreen() {
                       <Ionicons
                         name={showPassword ? "eye-off-outline" : "eye-outline"}
                         size={20}
-                        color={palette.slate700}
+                        color={colors.textSecondary}
                       />
                     </Pressable>
                   </View>
@@ -154,10 +166,6 @@ export default function LoginScreen() {
             <Pressable onPress={() => router.replace("/(auth)/register")} style={styles.secondaryButton}>
               <Text style={styles.secondaryButtonText}>Criar conta</Text>
             </Pressable>
-
-            <Text style={styles.tip}>
-              API atual: {apiBaseUrl}
-            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -183,11 +191,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  logo: {
-    color: palette.white,
-    fontSize: 40,
-    fontWeight: "900",
-    letterSpacing: 0.5,
+  logoImage: {
+    width: 210,
+    height: 78,
   },
   subtitle: {
     color: palette.blue200,
@@ -199,6 +205,8 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 20,
     gap: 14,
+    borderWidth: 1,
+    borderColor: palette.blue200,
     shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowRadius: 12,
@@ -288,11 +296,5 @@ const styles = StyleSheet.create({
     color: palette.danger,
     fontSize: 12,
     fontWeight: "700",
-  },
-  tip: {
-    color: palette.slate500,
-    fontSize: 11,
-    fontWeight: "600",
-    lineHeight: 16,
   },
 });

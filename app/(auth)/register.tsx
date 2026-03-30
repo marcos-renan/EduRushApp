@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -20,7 +21,8 @@ import { z } from "zod";
 import { registerRequest } from "../../src/services/api/auth";
 import { extractApiError } from "../../src/services/api/client";
 import { useAuthStore } from "../../src/store/auth-store";
-import { gradient, palette } from "../../src/theme/palette";
+import { useAppTheme } from "../../src/theme/app-theme";
+import { palette } from "../../src/theme/palette";
 
 const schema = z
   .object({
@@ -47,6 +49,7 @@ export default function RegisterScreen() {
   const setSession = useAuthStore((state) => state.setSession);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { colors, gradientColors, isDark } = useAppTheme();
 
   const {
     control,
@@ -76,7 +79,7 @@ export default function RegisterScreen() {
   });
 
   return (
-    <LinearGradient colors={gradient} style={styles.container}>
+    <LinearGradient colors={gradientColors} style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.select({ ios: "padding", android: "height" })}
         keyboardVerticalOffset={Platform.select({ ios: 24, android: 0 })}
@@ -88,15 +91,23 @@ export default function RegisterScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.hero}>
-            <Text style={styles.logo}>EduRush</Text>
+            <Image
+              source={
+                isDark
+                  ? require("../../assets/branding/edurush-dark.png")
+                  : require("../../assets/branding/edurush-light.png")
+              }
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
             <Text style={styles.subtitle}>Crie sua conta e comece a evoluir.</Text>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.title}>Criar conta</Text>
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>Criar conta</Text>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Nome</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>Nome</Text>
               <Controller
                 control={control}
                 name="name"
@@ -106,8 +117,8 @@ export default function RegisterScreen() {
                     onChangeText={onChange}
                     value={value}
                     placeholder="Seu nome"
-                    placeholderTextColor={palette.slate500}
-                    style={styles.input}
+                    placeholderTextColor={colors.textMuted}
+                    style={[styles.input, { borderColor: colors.border, backgroundColor: colors.inputBackground, color: colors.inputText }]}
                   />
                 )}
               />
@@ -115,7 +126,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>E-mail</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>E-mail</Text>
               <Controller
                 control={control}
                 name="email"
@@ -127,8 +138,8 @@ export default function RegisterScreen() {
                     onChangeText={onChange}
                     value={value}
                     placeholder="aluno@edurush.com"
-                    placeholderTextColor={palette.slate500}
-                    style={styles.input}
+                    placeholderTextColor={colors.textMuted}
+                    style={[styles.input, { borderColor: colors.border, backgroundColor: colors.inputBackground, color: colors.inputText }]}
                   />
                 )}
               />
@@ -136,7 +147,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Serie</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>Serie</Text>
               <View style={styles.gradeRow}>
                 {gradeOptions.map((option) => (
                   <Pressable
@@ -144,12 +155,14 @@ export default function RegisterScreen() {
                     onPress={() => setValue("grade_year", option.value, { shouldValidate: true })}
                     style={[
                       styles.gradeChip,
+                      { borderColor: colors.border, backgroundColor: colors.primarySoft },
                       selectedGrade === option.value && styles.gradeChipActive,
                     ]}
                   >
                     <Text
                       style={[
                         styles.gradeChipText,
+                        { color: colors.primary },
                         selectedGrade === option.value && styles.gradeChipTextActive,
                       ]}
                     >
@@ -161,20 +174,22 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Senha</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>Senha</Text>
               <Controller
                 control={control}
                 name="password"
                 render={({ field: { onChange, onBlur, value } }) => (
-                  <View style={styles.passwordWrapper}>
+                  <View style={[styles.passwordWrapper, { borderColor: colors.border, backgroundColor: colors.inputBackground }]}>
                     <TextInput
                       secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
                       onBlur={onBlur}
                       onChangeText={onChange}
                       value={value}
                       placeholder="******"
-                      placeholderTextColor={palette.slate500}
-                      style={styles.passwordInput}
+                      placeholderTextColor={colors.textMuted}
+                      style={[styles.passwordInput, { color: colors.inputText }]}
                     />
                     <Pressable
                       onPress={() => setShowPassword((prev) => !prev)}
@@ -184,7 +199,7 @@ export default function RegisterScreen() {
                       <Ionicons
                         name={showPassword ? "eye-off-outline" : "eye-outline"}
                         size={20}
-                        color={palette.slate700}
+                        color={colors.textSecondary}
                       />
                     </Pressable>
                   </View>
@@ -194,20 +209,22 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Confirmar senha</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>Confirmar senha</Text>
               <Controller
                 control={control}
                 name="password_confirmation"
                 render={({ field: { onChange, onBlur, value } }) => (
-                  <View style={styles.passwordWrapper}>
+                  <View style={[styles.passwordWrapper, { borderColor: colors.border, backgroundColor: colors.inputBackground }]}>
                     <TextInput
                       secureTextEntry={!showConfirmPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
                       onBlur={onBlur}
                       onChangeText={onChange}
                       value={value}
                       placeholder="******"
-                      placeholderTextColor={palette.slate500}
-                      style={styles.passwordInput}
+                      placeholderTextColor={colors.textMuted}
+                      style={[styles.passwordInput, { color: colors.inputText }]}
                     />
                     <Pressable
                       onPress={() => setShowConfirmPassword((prev) => !prev)}
@@ -217,7 +234,7 @@ export default function RegisterScreen() {
                       <Ionicons
                         name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
                         size={20}
-                        color={palette.slate700}
+                        color={colors.textSecondary}
                       />
                     </Pressable>
                   </View>
@@ -272,11 +289,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  logo: {
-    color: palette.white,
-    fontSize: 40,
-    fontWeight: "900",
-    letterSpacing: 0.5,
+  logoImage: {
+    width: 210,
+    height: 78,
   },
   subtitle: {
     color: palette.blue200,

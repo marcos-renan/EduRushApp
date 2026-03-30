@@ -1,19 +1,18 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { GradientScreen } from "../../src/components/GradientScreen";
-import { logoutRequest } from "../../src/services/api/auth";
 import { getMissions } from "../../src/services/api/missions";
 import { getTrails } from "../../src/services/api/trails";
 import { useAuthStore } from "../../src/store/auth-store";
+import { useAppTheme } from "../../src/theme/app-theme";
 import { palette } from "../../src/theme/palette";
 
 export default function DashboardScreen() {
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
   const profile = useAuthStore((state) => state.profile);
-  const clearSession = useAuthStore((state) => state.clearSession);
+  const { colors } = useAppTheme();
 
   const trailsQuery = useQuery({
     queryKey: ["trails", token],
@@ -27,64 +26,50 @@ export default function DashboardScreen() {
     enabled: !!token,
   });
 
-  const handleLogout = async () => {
-    try {
-      if (token) {
-        await logoutRequest(token);
-      }
-    } finally {
-      await clearSession();
-      router.replace("/(auth)/login");
-    }
-  };
-
-  const trailsCount = trailsQuery.data?.meta.total_trails ?? 0;
   const missionsCount = missionsQuery.data?.meta.total_missions ?? 0;
   const completedMissionsCount = missionsQuery.data?.meta.completed_missions ?? 0;
+  const subjectsCount = new Set((trailsQuery.data?.data ?? []).map((trail) => trail.subject.slug)).size;
 
   return (
     <GradientScreen>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.welcome}>Bem-vindo, {user?.name?.split(" ")[0] ?? "Aluno"}!</Text>
-            <Text style={styles.subWelcome}>Continue sua jornada no EduRush.</Text>
+            <Text style={[styles.welcome, { color: colors.textPrimary }]}>Bem-vindo, {user?.name?.split(" ")[0] ?? "Aluno"}!</Text>
+            <Text style={[styles.subWelcome, { color: colors.textSecondary }]}>Continue sua jornada no EduRush.</Text>
           </View>
-          <Pressable onPress={handleLogout} style={styles.logoutButton}>
-            <Ionicons name="log-out-outline" size={20} color={palette.blue700} />
-          </Pressable>
         </View>
 
-        <View style={styles.heroCard}>
-          <Text style={styles.heroTitle}>Seu progresso</Text>
+        <View style={[styles.heroCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <Text style={[styles.heroTitle, { color: colors.textPrimary }]}>Seu progresso</Text>
           <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>Nv. {profile?.level ?? 1}</Text>
-              <Text style={styles.statLabel}>Nivel</Text>
+            <View style={[styles.statBox, { backgroundColor: colors.cardMutedBackground }]}>
+              <Text style={[styles.statValue, { color: colors.primary }]}>Nv. {profile?.level ?? 1}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Nivel</Text>
             </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{profile?.total_xp ?? 0}</Text>
-              <Text style={styles.statLabel}>XP total</Text>
+            <View style={[styles.statBox, { backgroundColor: colors.cardMutedBackground }]}>
+              <Text style={[styles.statValue, { color: colors.primary }]}>{profile?.total_xp ?? 0}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>XP total</Text>
             </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{profile?.current_streak ?? 0}</Text>
-              <Text style={styles.statLabel}>Sequencia</Text>
+            <View style={[styles.statBox, { backgroundColor: colors.cardMutedBackground }]}>
+              <Text style={[styles.statValue, { color: colors.primary }]}>{profile?.current_streak ?? 0}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Sequencia</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.quickGrid}>
-          <Pressable style={styles.quickCard} onPress={() => router.push("/(tabs)/trilhas")}>
-            <Text style={styles.quickNumber}>{trailsCount}</Text>
-            <Text style={styles.quickTitle}>Trilhas ativas</Text>
+          <Pressable style={[styles.quickCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]} onPress={() => router.push("/(tabs)/trilhas")}>
+            <Text style={[styles.quickNumber, { color: colors.primary }]}>{subjectsCount}</Text>
+            <Text style={[styles.quickTitle, { color: colors.textSecondary }]}>Materias ativas</Text>
           </Pressable>
-          <Pressable style={styles.quickCard} onPress={() => router.push("/(tabs)/missoes")}>
-            <Text style={styles.quickNumber}>{missionsCount}</Text>
-            <Text style={styles.quickTitle}>Missoes abertas</Text>
+          <Pressable style={[styles.quickCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]} onPress={() => router.push("/(tabs)/missoes")}>
+            <Text style={[styles.quickNumber, { color: colors.primary }]}>{missionsCount}</Text>
+            <Text style={[styles.quickTitle, { color: colors.textSecondary }]}>Missoes abertas</Text>
           </Pressable>
-          <View style={styles.quickCard}>
-            <Text style={styles.quickNumber}>{completedMissionsCount}</Text>
-            <Text style={styles.quickTitle}>Missoes concluidas</Text>
+          <View style={[styles.quickCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Text style={[styles.quickNumber, { color: colors.primary }]}>{completedMissionsCount}</Text>
+            <Text style={[styles.quickTitle, { color: colors.textSecondary }]}>Missoes concluidas</Text>
           </View>
         </View>
       </ScrollView>
@@ -112,16 +97,6 @@ const styles = StyleSheet.create({
     color: palette.slate700,
     fontSize: 14,
     fontWeight: "600",
-  },
-  logoutButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: palette.white,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: palette.blue200,
   },
   heroCard: {
     backgroundColor: palette.white,

@@ -4,13 +4,18 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo } from "react";
 import { CenteredState } from "../src/components/CenteredState";
 import { useAuthStore } from "../src/store/auth-store";
+import { useThemeStore } from "../src/store/theme-store";
 
 export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
   const token = useAuthStore((state) => state.token);
-  const hydrated = useAuthStore((state) => state.hydrated);
-  const hydrate = useAuthStore((state) => state.hydrate);
+  const authHydrated = useAuthStore((state) => state.hydrated);
+  const hydrateAuth = useAuthStore((state) => state.hydrate);
+  const isDark = useThemeStore((state) => state.isDark);
+  const themeHydrated = useThemeStore((state) => state.hydrated);
+  const hydrateTheme = useThemeStore((state) => state.hydrate);
+  const hydrated = authHydrated && themeHydrated;
 
   const queryClient = useMemo(
     () =>
@@ -26,8 +31,8 @@ export default function RootLayout() {
   );
 
   useEffect(() => {
-    void hydrate();
-  }, [hydrate]);
+    void Promise.all([hydrateAuth(), hydrateTheme()]);
+  }, [hydrateAuth, hydrateTheme]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -49,11 +54,12 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? "light" : "dark"} />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)/login" />
         <Stack.Screen name="(auth)/register" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="review" />
         <Stack.Screen name="trail/[slug]" />
         <Stack.Screen name="lesson/[slug]" />
       </Stack>
