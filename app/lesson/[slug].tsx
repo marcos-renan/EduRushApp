@@ -3,8 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAudioPlayer } from "expo-audio";
 import { router, useLocalSearchParams } from "expo-router";
 import LottieView from "lottie-react-native";
-import { useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { GradientScreen } from "../../src/components/GradientScreen";
 import { submitLessonAttempt } from "../../src/services/api/lessons";
 import { extractApiError } from "../../src/services/api/client";
@@ -18,7 +18,7 @@ export default function LessonQuestionsScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const token = useAuthStore((state) => state.token);
   const updateProfile = useAuthStore((state) => state.updateProfile);
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
   const queryClient = useQueryClient();
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -26,12 +26,21 @@ export default function LessonQuestionsScreen() {
   const [checkedByQuestion, setCheckedByQuestion] = useState<Record<string, boolean>>({});
   const [isCorrectByQuestion, setIsCorrectByQuestion] = useState<Record<string, boolean>>({});
   const [result, setResult] = useState<LessonAttemptResponse["data"] | null>(null);
+  const playedPassSoundRef = useRef(false);
   const correctPlayer = useAudioPlayer(require("../../assets/sounds/correct.mpeg"), {
     keepAudioSessionActive: true,
   });
   const wrongPlayer = useAudioPlayer(require("../../assets/sounds/wrong.mpeg"), {
     keepAudioSessionActive: true,
   });
+  const winPlayer = useAudioPlayer(require("../../assets/sounds/win.mpeg"), {
+    keepAudioSessionActive: true,
+  });
+
+  useEffect(() => {
+    wrongPlayer.volume = 1;
+    winPlayer.volume = 0.95;
+  }, [wrongPlayer, winPlayer]);
 
   const playCheckSound = async (isCorrect: boolean) => {
     const player = isCorrect ? correctPlayer : wrongPlayer;
@@ -40,7 +49,7 @@ export default function LessonQuestionsScreen() {
       await player.seekTo(0);
       player.play();
     } catch (error) {
-      console.warn("Nao foi possivel tocar o som de feedback.", error);
+      console.warn("Não foi possível tocar o som de feedback.", error);
     }
   };
 
@@ -56,6 +65,27 @@ export default function LessonQuestionsScreen() {
   const isCurrentChecked = currentQuestion ? !!checkedByQuestion[currentQuestion.external_id] : false;
   const isCurrentCorrect = currentQuestion ? isCorrectByQuestion[currentQuestion.external_id] : false;
   const isLastQuestion = questions.length > 0 && currentIndex === questions.length - 1;
+  const hasPassed = !!result && result.quiz.score >= 70;
+  const hasFailed = !!result && result.quiz.score < 70;
+
+  useEffect(() => {
+    if (!result) {
+      playedPassSoundRef.current = false;
+      return;
+    }
+
+    if (hasPassed && !playedPassSoundRef.current) {
+      playedPassSoundRef.current = true;
+      void (async () => {
+        try {
+          await winPlayer.seekTo(0);
+          winPlayer.play();
+        } catch (error) {
+          console.warn("Não foi possível tocar o som de vitória.", error);
+        }
+      })();
+    }
+  }, [hasPassed, result, winPlayer]);
 
   const submitPayload = useMemo(
     () => ({
@@ -133,198 +163,247 @@ export default function LessonQuestionsScreen() {
 
   return (
     <GradientScreen>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.topRow}>
-          <Pressable onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-            <Ionicons name="arrow-back" size={18} color={colors.primary} />
-          </Pressable>
-          <Text style={[styles.topTitle, { color: colors.textPrimary }]}>Licao</Text>
-        </View>
-
-        {questionsQuery.isLoading ? (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color={palette.blue700} />
-            <Text style={styles.centeredText}>Carregando questoes...</Text>
+      <View style={styles.screen}>
+        <ScrollView contentContainerStyle={styles.container}>
+          <View style={styles.topRow}>
+            <Pressable onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <Ionicons name="arrow-back" size={18} color={colors.primary} />
+            </Pressable>
+            <Text style={[styles.topTitle, { color: colors.textPrimary }]}>Licao</Text>
           </View>
-        ) : null}
 
-        {questionsQuery.isError ? (
-          <Text style={styles.errorText}>Nao foi possivel carregar as questoes desta licao.</Text>
-        ) : null}
-
-        {questionsQuery.data ? (
-          <>
-            <View style={[styles.headerCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-              <Text style={[styles.lessonTitle, { color: colors.textPrimary }]}>{questionsQuery.data.data.lesson.title}</Text>
-              <Text style={[styles.lessonObjective, { color: colors.textSecondary }]}>{questionsQuery.data.data.lesson.objective}</Text>
+          {questionsQuery.isLoading ? (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color={palette.blue700} />
+              <Text style={styles.centeredText}>Carregando questões...</Text>
             </View>
+          ) : null}
 
-            {result ? (
-              <View style={[styles.resultCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                <Text style={styles.resultTitle}>Licao concluida</Text>
-                <Text style={styles.resultText}>
-                  Voce acertou {result.quiz.correct_answers} de {result.quiz.total_questions} questoes.
-                </Text>
-                <Text style={styles.resultText}>Pontuacao: {result.quiz.score}%</Text>
-                <Text style={styles.resultHighlight}>
-                  {result.progress.already_completed
-                    ? "Esta licao ja tinha sido concluida antes."
-                    : `+${result.progress.earned_xp} XP ganhos.`}
-                </Text>
+          {questionsQuery.isError ? (
+            <Text style={styles.errorText}>Não foi possível carregar as questões desta lição.</Text>
+          ) : null}
 
-                {result.completed_missions.length > 0 ? (
-                  <View style={[styles.highlightBlock, { borderColor: colors.border, backgroundColor: colors.cardMutedBackground }]}>
-                    <Text style={styles.highlightTitle}>Missoes concluidas</Text>
-                    {result.completed_missions.map((mission, index) => (
-                      <Text key={`${mission.title}-${index}`} style={styles.highlightItem}>
-                        {mission.title} (+{mission.reward_xp} XP)
-                      </Text>
-                    ))}
+          {questionsQuery.data ? (
+            <>
+              <View style={[styles.headerCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                <Text style={[styles.lessonTitle, { color: colors.textPrimary }]}>{questionsQuery.data.data.lesson.title}</Text>
+                <Text style={[styles.lessonObjective, { color: colors.textSecondary }]}>{questionsQuery.data.data.lesson.objective}</Text>
+              </View>
+
+              {result ? (
+                hasPassed ? (
+                  <View style={[styles.resultCard, styles.passCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                    <LottieView
+                      source={require("../../assets/animations/trophy.json")}
+                      autoPlay
+                      loop={false}
+                      style={styles.trophyAnimation}
+                    />
+                    <Text style={styles.passTitle}>Parabéns você passou!</Text>
+                    <Text style={[styles.passSubtitle, isDark && styles.passDarkText]}>
+                      Excelente desempenho nesta lição.
+                    </Text>
+
+                    <Text style={[styles.resultText, styles.resultTextCentered, isDark && styles.passDarkText]}>
+                      Você acertou {result.quiz.correct_answers} de {result.quiz.total_questions} questões.
+                    </Text>
+                    <Text style={[styles.resultText, styles.resultTextCentered, isDark && styles.passDarkText]}>
+                      Pontuação: {result.quiz.score}%
+                    </Text>
+                    <Text style={[styles.resultHighlight, styles.resultTextCentered]}>
+                      {result.progress.already_completed
+                        ? "Esta lição já tinha sido concluida antes."
+                        : `+${result.progress.earned_xp} XP ganhos.`}
+                    </Text>
+
+                    {result.completed_missions.length > 0 ? (
+                      <View style={[styles.highlightBlock, { borderColor: colors.border, backgroundColor: colors.cardMutedBackground }]}>
+                        <Text style={styles.highlightTitle}>Missoes concluidas</Text>
+                        {result.completed_missions.map((mission, index) => (
+                          <Text key={`${mission.title}-${index}`} style={styles.highlightItem}>
+                            {mission.title} (+{mission.reward_xp} XP)
+                          </Text>
+                        ))}
+                      </View>
+                    ) : null}
+
+                    {result.unlocked_badges.length > 0 ? (
+                      <View style={[styles.highlightBlock, { borderColor: colors.border, backgroundColor: colors.cardMutedBackground }]}>
+                        <Text style={styles.highlightTitle}>Badges desbloqueados</Text>
+                        {result.unlocked_badges.map((badge, index) => (
+                          <Text key={`${badge.name}-${index}`} style={styles.highlightItem}>
+                            {badge.name}
+                          </Text>
+                        ))}
+                      </View>
+                    ) : null}
+
+                    <View style={styles.actionsRow}>
+                      <Pressable onPress={resetAttempt} style={styles.secondaryButton}>
+                        <Text style={styles.secondaryButtonText}>Refazer</Text>
+                      </Pressable>
+                      <Pressable onPress={() => router.back()} style={styles.primaryButton}>
+                        <Text style={styles.primaryButtonText}>Voltar</Text>
+                      </Pressable>
+                    </View>
                   </View>
-                ) : null}
+                ) : hasFailed ? (
+                  <View style={[styles.resultCard, styles.failCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                    <Image
+                      source={require("../../assets/images/defeat.png")}
+                      style={styles.defeatImage}
+                      resizeMode="contain"
+                    />
+                    <Text style={[styles.failTitle, { color: colors.textPrimary }]}>Infelizmente não foi dessa vez!</Text>
+                    <Text style={[styles.failSubtitle, { color: colors.textSecondary }]}>Mas você pode tentar mais uma vez!</Text>
 
-                {result.unlocked_badges.length > 0 ? (
-                  <View style={[styles.highlightBlock, { borderColor: colors.border, backgroundColor: colors.cardMutedBackground }]}>
-                    <Text style={styles.highlightTitle}>Badges desbloqueados</Text>
-                    {result.unlocked_badges.map((badge, index) => (
-                      <Text key={`${badge.name}-${index}`} style={styles.highlightItem}>
-                        {badge.name}
-                      </Text>
-                    ))}
+                    <View style={styles.actionsRow}>
+                      <Pressable onPress={resetAttempt} style={styles.secondaryButton}>
+                        <Text style={styles.secondaryButtonText}>Tentar denovo</Text>
+                      </Pressable>
+                      <Pressable onPress={() => router.back()} style={styles.primaryButton}>
+                        <Text style={styles.primaryButtonText}>Voltar</Text>
+                      </Pressable>
+                    </View>
                   </View>
-                ) : null}
-
-                <View style={styles.actionsRow}>
-                  <Pressable onPress={resetAttempt} style={styles.secondaryButton}>
-                    <Text style={styles.secondaryButtonText}>Refazer</Text>
-                  </Pressable>
-                  <Pressable onPress={() => router.back()} style={styles.primaryButton}>
-                    <Text style={styles.primaryButtonText}>Voltar</Text>
+                ) : null
+              ) : questions.length === 0 ? (
+                <View style={[styles.emptyCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                  <Text style={styles.emptyTitle}>Sem questões nesta lição</Text>
+                  <Text style={styles.emptyText}>
+                    Você pode concluir a lição agora e receber o XP base.
+                  </Text>
+                  <Pressable
+                    onPress={handleFinishWithoutQuestions}
+                    style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
+                    disabled={submitMutation.isPending}
+                  >
+                    {submitMutation.isPending ? (
+                      <ActivityIndicator color={palette.white} />
+                    ) : (
+                      <Text style={styles.primaryButtonText}>Concluir lição</Text>
+                    )}
                   </Pressable>
                 </View>
-              </View>
-            ) : questions.length === 0 ? (
-              <View style={[styles.emptyCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                <Text style={styles.emptyTitle}>Sem questoes nesta licao</Text>
-                <Text style={styles.emptyText}>
-                  Voce pode concluir a licao agora e receber o XP base.
-                </Text>
-                <Pressable
-                  onPress={handleFinishWithoutQuestions}
-                  style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
-                  disabled={submitMutation.isPending}
-                >
-                  {submitMutation.isPending ? (
-                    <ActivityIndicator color={palette.white} />
-                  ) : (
-                    <Text style={styles.primaryButtonText}>Concluir licao</Text>
-                  )}
-                </Pressable>
-              </View>
-            ) : (
-              <View style={[styles.questionCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                <Text style={styles.questionCounter}>
-                  Questao {currentIndex + 1} de {questions.length}
-                </Text>
-                <Text style={[styles.questionPrompt, { color: colors.textPrimary }]}>{currentQuestion.prompt}</Text>
+              ) : (
+                <View style={[styles.questionCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                  <Text style={styles.questionCounter}>
+                    Questao {currentIndex + 1} de {questions.length}
+                  </Text>
+                  <Text style={[styles.questionPrompt, { color: colors.textPrimary }]}>{currentQuestion.prompt}</Text>
 
-                <View style={styles.options}>
-                  {currentQuestion.options.map((option, index) => {
-                    const selected = selectedOption === index;
-                    const isCorrectOption = isCurrentChecked && index === currentQuestion.correct_option;
-                    const isWrongSelected = isCurrentChecked && selected && index !== currentQuestion.correct_option;
+                  <View style={styles.options}>
+                    {currentQuestion.options.map((option, index) => {
+                      const selected = selectedOption === index;
+                      const isCorrectOption = isCurrentChecked && index === currentQuestion.correct_option;
+                      const isWrongSelected = isCurrentChecked && selected && index !== currentQuestion.correct_option;
 
-                    return (
-                      <Pressable
-                        key={`${currentQuestion.external_id}-${index}`}
-                        onPress={() => handleChooseOption(currentQuestion, index)}
-                        style={[
-                          styles.option,
-                          { borderColor: colors.border, backgroundColor: colors.cardMutedBackground },
-                          selected && styles.optionSelected,
-                          isCorrectOption && styles.optionCorrect,
-                          isWrongSelected && styles.optionWrong,
-                        ]}
-                      >
-                        <Text
+                      return (
+                        <Pressable
+                          key={`${currentQuestion.external_id}-${index}`}
+                          onPress={() => handleChooseOption(currentQuestion, index)}
                           style={[
-                            styles.optionText,
-                            { color: colors.textSecondary },
-                            selected && styles.optionTextSelected,
-                            (isCorrectOption || isWrongSelected) && styles.optionTextChecked,
+                            styles.option,
+                            { borderColor: colors.border, backgroundColor: colors.cardMutedBackground },
+                            selected && styles.optionSelected,
+                            isCorrectOption && styles.optionCorrect,
+                            isWrongSelected && styles.optionWrong,
                           ]}
                         >
-                          {option}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+                          <Text
+                            style={[
+                              styles.optionText,
+                              { color: colors.textSecondary },
+                              selected && styles.optionTextSelected,
+                              (isCorrectOption || isWrongSelected) && styles.optionTextChecked,
+                            ]}
+                          >
+                            {option}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
 
-                <Text style={styles.answerCount}>
-                  Respondidas: {Object.keys(answersByQuestion).length}/{questions.length}
-                </Text>
-
-                {isCurrentChecked ? (
-                  <Text style={[styles.checkFeedback, isCurrentCorrect ? styles.checkFeedbackSuccess : styles.checkFeedbackError]}>
-                    {isCurrentCorrect ? "Resposta correta!" : "Resposta incorreta."}
+                  <Text style={styles.answerCount}>
+                    Respondidas: {Object.keys(answersByQuestion).length}/{questions.length}
                   </Text>
-                ) : null}
 
-                {submitMutation.isError ? (
-                  <Text style={styles.errorText}>{extractApiError(submitMutation.error)}</Text>
-                ) : null}
+                  {isCurrentChecked ? (
+                    <Text style={[styles.checkFeedback, isCurrentCorrect ? styles.checkFeedbackSuccess : styles.checkFeedbackError]}>
+                      {isCurrentCorrect ? "Resposta correta!" : "Resposta incorreta."}
+                    </Text>
+                  ) : null}
 
-                <Pressable
-                  onPress={handlePrimaryButtonPress}
-                  disabled={selectedOption === undefined || submitMutation.isPending}
-                  style={({ pressed }) => [
-                    styles.primaryButton,
-                    {
-                      backgroundColor: isCurrentChecked
-                        ? isCurrentCorrect
-                          ? "#2f855a"
-                          : "#de5a5a"
-                        : colors.primary,
-                    },
-                    (selectedOption === undefined || submitMutation.isPending) && styles.primaryButtonDisabled,
-                    pressed && styles.buttonPressed,
-                  ]}
-                >
-                  {submitMutation.isPending ? (
-                    <ActivityIndicator color={palette.white} />
-                  ) : isCurrentChecked ? (
-                    <View style={styles.buttonContent}>
-                      <LottieView
-                        key={`${currentQuestion.external_id}-${isCurrentCorrect ? "success" : "error"}`}
-                        source={
-                          isCurrentCorrect
-                            ? require("../../assets/animations/success.json")
-                            : require("../../assets/animations/error.json")
-                        }
-                        autoPlay
-                        loop={false}
-                        style={[
-                          styles.buttonAnimation,
-                          !isCurrentCorrect && styles.buttonAnimationError,
-                        ]}
-                      />
-                      <Text style={styles.primaryButtonText}>Continuar</Text>
-                    </View>
-                  ) : (
-                    <Text style={styles.primaryButtonText}>Verificar</Text>
-                  )}
-                </Pressable>
-              </View>
-            )}
-          </>
+                  {submitMutation.isError ? (
+                    <Text style={styles.errorText}>{extractApiError(submitMutation.error)}</Text>
+                  ) : null}
+
+                  <Pressable
+                    onPress={handlePrimaryButtonPress}
+                    disabled={selectedOption === undefined || submitMutation.isPending}
+                    style={({ pressed }) => [
+                      styles.primaryButton,
+                      {
+                        backgroundColor: isCurrentChecked
+                          ? isCurrentCorrect
+                            ? "#2f855a"
+                            : "#de5a5a"
+                          : colors.primary,
+                      },
+                      (selectedOption === undefined || submitMutation.isPending) && styles.primaryButtonDisabled,
+                      pressed && styles.buttonPressed,
+                    ]}
+                  >
+                    {submitMutation.isPending ? (
+                      <ActivityIndicator color={palette.white} />
+                    ) : isCurrentChecked ? (
+                      <View style={styles.buttonContent}>
+                        <LottieView
+                          key={`${currentQuestion.external_id}-${isCurrentCorrect ? "success" : "error"}`}
+                          source={
+                            isCurrentCorrect
+                              ? require("../../assets/animations/success.json")
+                              : require("../../assets/animations/error.json")
+                          }
+                          autoPlay
+                          loop={false}
+                          style={[
+                            styles.buttonAnimation,
+                            !isCurrentCorrect && styles.buttonAnimationError,
+                          ]}
+                        />
+                        <Text style={styles.primaryButtonText}>Continuar</Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.primaryButtonText}>Verificar</Text>
+                    )}
+                  </Pressable>
+                </View>
+              )}
+            </>
+          ) : null}
+        </ScrollView>
+
+        {hasPassed ? (
+          <View pointerEvents="none" style={styles.confettiOverlay}>
+            <LottieView
+              source={require("../../assets/animations/confetti.json")}
+              autoPlay
+              loop={false}
+              style={styles.confettiAnimation}
+            />
+          </View>
         ) : null}
-      </ScrollView>
+      </View>
     </GradientScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
   container: {
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -465,6 +544,52 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
   },
+  passCard: {
+    alignItems: "center",
+  },
+  failCard: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 24,
+  },
+  defeatImage: {
+    width: 180,
+    height: 180,
+    marginBottom: 8,
+  },
+  failTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  failSubtitle: {
+    marginTop: 6,
+    fontSize: 15,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  trophyAnimation: {
+    width: 180,
+    height: 180,
+    marginTop: -8,
+    marginBottom: -6,
+  },
+  passTitle: {
+    color: "#ffb43f",
+    fontSize: 24,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  passSubtitle: {
+    color: palette.slate700,
+    fontSize: 14,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  passDarkText: {
+    color: palette.white,
+  },
   resultTitle: {
     color: palette.slate900,
     fontSize: 20,
@@ -474,6 +599,9 @@ const styles = StyleSheet.create({
     color: palette.slate700,
     fontSize: 14,
     fontWeight: "600",
+  },
+  resultTextCentered: {
+    textAlign: "center",
   },
   resultHighlight: {
     color: palette.success,
@@ -488,6 +616,7 @@ const styles = StyleSheet.create({
     borderColor: palette.blue200,
     backgroundColor: palette.blue100,
     padding: 10,
+    width: "100%",
   },
   highlightTitle: {
     color: palette.blue700,
@@ -568,5 +697,13 @@ const styles = StyleSheet.create({
     color: palette.danger,
     fontSize: 13,
     fontWeight: "700",
+  },
+  confettiOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 40,
+  },
+  confettiAnimation: {
+    width: "100%",
+    height: "100%",
   },
 });
