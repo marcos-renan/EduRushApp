@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
+import LottieView from "lottie-react-native";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { GradientScreen } from "../../src/components/GradientScreen";
@@ -8,6 +9,7 @@ import { submitLessonAttempt } from "../../src/services/api/lessons";
 import { extractApiError } from "../../src/services/api/client";
 import { getLessonQuestions } from "../../src/services/api/questions";
 import { useAuthStore } from "../../src/store/auth-store";
+import { useAppTheme } from "../../src/theme/app-theme";
 import { palette } from "../../src/theme/palette";
 import type { LessonAttemptResponse, LessonQuestion } from "../../src/types/api";
 
@@ -15,10 +17,13 @@ export default function LessonQuestionsScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const token = useAuthStore((state) => state.token);
   const updateProfile = useAuthStore((state) => state.updateProfile);
+  const { colors } = useAppTheme();
   const queryClient = useQueryClient();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answersByQuestion, setAnswersByQuestion] = useState<Record<string, number>>({});
+  const [checkedByQuestion, setCheckedByQuestion] = useState<Record<string, boolean>>({});
+  const [isCorrectByQuestion, setIsCorrectByQuestion] = useState<Record<string, boolean>>({});
   const [result, setResult] = useState<LessonAttemptResponse["data"] | null>(null);
 
   const questionsQuery = useQuery({
@@ -30,6 +35,8 @@ export default function LessonQuestionsScreen() {
   const questions = questionsQuery.data?.data.questions ?? [];
   const currentQuestion = questions[currentIndex];
   const selectedOption = currentQuestion ? answersByQuestion[currentQuestion.external_id] : undefined;
+  const isCurrentChecked = currentQuestion ? !!checkedByQuestion[currentQuestion.external_id] : false;
+  const isCurrentCorrect = currentQuestion ? isCorrectByQuestion[currentQuestion.external_id] : false;
   const isLastQuestion = questions.length > 0 && currentIndex === questions.length - 1;
 
   const submitPayload = useMemo(
@@ -58,7 +65,7 @@ export default function LessonQuestionsScreen() {
   });
 
   const handleChooseOption = (question: LessonQuestion, optionIndex: number) => {
-    if (submitMutation.isPending) return;
+    if (submitMutation.isPending || checkedByQuestion[question.external_id]) return;
 
     setAnswersByQuestion((prev) => ({
       ...prev,
@@ -66,8 +73,23 @@ export default function LessonQuestionsScreen() {
     }));
   };
 
-  const handleContinue = () => {
+  const handlePrimaryButtonPress = () => {
     if (!currentQuestion || selectedOption === undefined) return;
+
+    if (!checkedByQuestion[currentQuestion.external_id]) {
+      const answerIsCorrect = selectedOption === currentQuestion.correct_option;
+
+      setCheckedByQuestion((prev) => ({
+        ...prev,
+        [currentQuestion.external_id]: true,
+      }));
+
+      setIsCorrectByQuestion((prev) => ({
+        ...prev,
+        [currentQuestion.external_id]: answerIsCorrect,
+      }));
+      return;
+    }
 
     if (isLastQuestion) {
       submitMutation.mutate();
@@ -85,16 +107,18 @@ export default function LessonQuestionsScreen() {
     setResult(null);
     setCurrentIndex(0);
     setAnswersByQuestion({});
+    setCheckedByQuestion({});
+    setIsCorrectByQuestion({});
   };
 
   return (
     <GradientScreen>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.topRow}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={18} color={palette.blue700} />
+          <Pressable onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Ionicons name="arrow-back" size={18} color={colors.primary} />
           </Pressable>
-          <Text style={styles.topTitle}>Licao</Text>
+          <Text style={[styles.topTitle, { color: colors.textPrimary }]}>Licao</Text>
         </View>
 
         {questionsQuery.isLoading ? (
@@ -110,13 +134,13 @@ export default function LessonQuestionsScreen() {
 
         {questionsQuery.data ? (
           <>
-            <View style={styles.headerCard}>
-              <Text style={styles.lessonTitle}>{questionsQuery.data.data.lesson.title}</Text>
-              <Text style={styles.lessonObjective}>{questionsQuery.data.data.lesson.objective}</Text>
+            <View style={[styles.headerCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <Text style={[styles.lessonTitle, { color: colors.textPrimary }]}>{questionsQuery.data.data.lesson.title}</Text>
+              <Text style={[styles.lessonObjective, { color: colors.textSecondary }]}>{questionsQuery.data.data.lesson.objective}</Text>
             </View>
 
             {result ? (
-              <View style={styles.resultCard}>
+              <View style={[styles.resultCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                 <Text style={styles.resultTitle}>Licao concluida</Text>
                 <Text style={styles.resultText}>
                   Voce acertou {result.quiz.correct_answers} de {result.quiz.total_questions} questoes.
@@ -129,7 +153,7 @@ export default function LessonQuestionsScreen() {
                 </Text>
 
                 {result.completed_missions.length > 0 ? (
-                  <View style={styles.highlightBlock}>
+                  <View style={[styles.highlightBlock, { borderColor: colors.border, backgroundColor: colors.cardMutedBackground }]}>
                     <Text style={styles.highlightTitle}>Missoes concluidas</Text>
                     {result.completed_missions.map((mission, index) => (
                       <Text key={`${mission.title}-${index}`} style={styles.highlightItem}>
@@ -140,7 +164,7 @@ export default function LessonQuestionsScreen() {
                 ) : null}
 
                 {result.unlocked_badges.length > 0 ? (
-                  <View style={styles.highlightBlock}>
+                  <View style={[styles.highlightBlock, { borderColor: colors.border, backgroundColor: colors.cardMutedBackground }]}>
                     <Text style={styles.highlightTitle}>Badges desbloqueados</Text>
                     {result.unlocked_badges.map((badge, index) => (
                       <Text key={`${badge.name}-${index}`} style={styles.highlightItem}>
@@ -160,7 +184,7 @@ export default function LessonQuestionsScreen() {
                 </View>
               </View>
             ) : questions.length === 0 ? (
-              <View style={styles.emptyCard}>
+              <View style={[styles.emptyCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                 <Text style={styles.emptyTitle}>Sem questoes nesta licao</Text>
                 <Text style={styles.emptyText}>
                   Voce pode concluir a licao agora e receber o XP base.
@@ -178,23 +202,38 @@ export default function LessonQuestionsScreen() {
                 </Pressable>
               </View>
             ) : (
-              <View style={styles.questionCard}>
+              <View style={[styles.questionCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                 <Text style={styles.questionCounter}>
                   Questao {currentIndex + 1} de {questions.length}
                 </Text>
-                <Text style={styles.questionPrompt}>{currentQuestion.prompt}</Text>
+                <Text style={[styles.questionPrompt, { color: colors.textPrimary }]}>{currentQuestion.prompt}</Text>
 
                 <View style={styles.options}>
                   {currentQuestion.options.map((option, index) => {
                     const selected = selectedOption === index;
+                    const isCorrectOption = isCurrentChecked && index === currentQuestion.correct_option;
+                    const isWrongSelected = isCurrentChecked && selected && index !== currentQuestion.correct_option;
 
                     return (
                       <Pressable
                         key={`${currentQuestion.external_id}-${index}`}
                         onPress={() => handleChooseOption(currentQuestion, index)}
-                        style={[styles.option, selected && styles.optionSelected]}
+                        style={[
+                          styles.option,
+                          { borderColor: colors.border, backgroundColor: colors.cardMutedBackground },
+                          selected && styles.optionSelected,
+                          isCorrectOption && styles.optionCorrect,
+                          isWrongSelected && styles.optionWrong,
+                        ]}
                       >
-                        <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
+                        <Text
+                          style={[
+                            styles.optionText,
+                            { color: colors.textSecondary },
+                            selected && styles.optionTextSelected,
+                            (isCorrectOption || isWrongSelected) && styles.optionTextChecked,
+                          ]}
+                        >
                           {option}
                         </Text>
                       </Pressable>
@@ -206,25 +245,54 @@ export default function LessonQuestionsScreen() {
                   Respondidas: {Object.keys(answersByQuestion).length}/{questions.length}
                 </Text>
 
+                {isCurrentChecked ? (
+                  <Text style={[styles.checkFeedback, isCurrentCorrect ? styles.checkFeedbackSuccess : styles.checkFeedbackError]}>
+                    {isCurrentCorrect ? "Resposta correta!" : "Resposta incorreta."}
+                  </Text>
+                ) : null}
+
                 {submitMutation.isError ? (
                   <Text style={styles.errorText}>{extractApiError(submitMutation.error)}</Text>
                 ) : null}
 
                 <Pressable
-                  onPress={handleContinue}
+                  onPress={handlePrimaryButtonPress}
                   disabled={selectedOption === undefined || submitMutation.isPending}
                   style={({ pressed }) => [
                     styles.primaryButton,
+                    {
+                      backgroundColor: isCurrentChecked
+                        ? isCurrentCorrect
+                          ? "#2f855a"
+                          : "#c53030"
+                        : colors.primary,
+                    },
                     (selectedOption === undefined || submitMutation.isPending) && styles.primaryButtonDisabled,
                     pressed && styles.buttonPressed,
                   ]}
                 >
                   {submitMutation.isPending ? (
                     <ActivityIndicator color={palette.white} />
+                  ) : isCurrentChecked ? (
+                    <View style={styles.buttonContent}>
+                      <LottieView
+                        key={`${currentQuestion.external_id}-${isCurrentCorrect ? "success" : "error"}`}
+                        source={
+                          isCurrentCorrect
+                            ? require("../../assets/animations/success.json")
+                            : require("../../assets/animations/error.json")
+                        }
+                        autoPlay
+                        loop={false}
+                        style={[
+                          styles.buttonAnimation,
+                          !isCurrentCorrect && styles.buttonAnimationError,
+                        ]}
+                      />
+                      <Text style={styles.primaryButtonText}>Continuar</Text>
+                    </View>
                   ) : (
-                    <Text style={styles.primaryButtonText}>
-                      {isLastQuestion ? "Finalizar licao" : "Proxima questao"}
-                    </Text>
+                    <Text style={styles.primaryButtonText}>Verificar</Text>
                   )}
                 </Pressable>
               </View>
@@ -324,10 +392,31 @@ const styles = StyleSheet.create({
   optionTextSelected: {
     color: palette.white,
   },
+  optionTextChecked: {
+    color: palette.white,
+  },
+  optionCorrect: {
+    borderColor: "#16a34a",
+    backgroundColor: "#15803d",
+  },
+  optionWrong: {
+    borderColor: palette.danger,
+    backgroundColor: "#b91c1c",
+  },
   answerCount: {
     color: palette.slate500,
     fontSize: 12,
     fontWeight: "700",
+  },
+  checkFeedback: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  checkFeedbackSuccess: {
+    color: palette.success,
+  },
+  checkFeedbackError: {
+    color: palette.danger,
   },
   emptyCard: {
     backgroundColor: palette.white,
@@ -401,7 +490,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.blue700,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
+    height: 48,
     paddingHorizontal: 14,
   },
   primaryButtonDisabled: {
@@ -411,6 +500,20 @@ const styles = StyleSheet.create({
     color: palette.white,
     fontSize: 14,
     fontWeight: "800",
+  },
+  buttonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  buttonAnimation: {
+    width: 28,
+    height: 28,
+    transform: [{ scale: 1.9 }],
+  },
+  buttonAnimationError: {
+    transform: [{ scale: 2.35 }],
   },
   secondaryButton: {
     flex: 1,

@@ -5,11 +5,13 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { GradientScreen } from "../../src/components/GradientScreen";
 import { getTrailBySlug } from "../../src/services/api/trails";
 import { useAuthStore } from "../../src/store/auth-store";
+import { useAppTheme } from "../../src/theme/app-theme";
 import { palette } from "../../src/theme/palette";
 
 export default function TrailDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const token = useAuthStore((state) => state.token);
+  const { colors } = useAppTheme();
 
   const trailQuery = useQuery({
     queryKey: ["trail-detail", slug, token],
@@ -21,10 +23,10 @@ export default function TrailDetailScreen() {
     <GradientScreen>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.topRow}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={18} color={palette.blue700} />
+          <Pressable onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Ionicons name="arrow-back" size={18} color={colors.primary} />
           </Pressable>
-          <Text style={styles.topTitle}>Detalhe da trilha</Text>
+          <Text style={[styles.topTitle, { color: colors.textPrimary }]}>Detalhe da trilha</Text>
         </View>
 
         {trailQuery.isLoading ? (
@@ -38,32 +40,32 @@ export default function TrailDetailScreen() {
 
         {trailQuery.data ? (
           <>
-            <View style={styles.heroCard}>
-              <Text style={styles.subject}>{trailQuery.data.data.subject.name}</Text>
-              <Text style={styles.title}>{trailQuery.data.data.title}</Text>
-              <Text style={styles.description}>{trailQuery.data.data.description}</Text>
+            <View style={[styles.heroCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <Text style={[styles.subject, { color: colors.primary }]}>{trailQuery.data.data.subject.name}</Text>
+              <Text style={[styles.title, { color: colors.textPrimary }]}>{trailQuery.data.data.title}</Text>
+              <Text style={[styles.description, { color: colors.textSecondary }]}>{trailQuery.data.data.description}</Text>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Licoes</Text>
+              <Text style={[styles.sectionTitle, { color: colors.primary }]}>Licoes</Text>
               <View style={styles.lessonList}>
                 {trailQuery.data.data.lessons.map((lesson) => (
-                  <View key={lesson.external_id} style={styles.lessonCard}>
+                  <View key={lesson.external_id} style={[styles.lessonCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                     <View style={styles.lessonHeader}>
-                      <Text style={styles.lessonTitle}>
+                      <Text style={[styles.lessonTitle, { color: colors.textPrimary }]}>
                         {lesson.position}. {lesson.title}
                       </Text>
                       <Text style={[styles.lessonStatus, lesson.is_completed && styles.lessonCompleted]}>
                         {lesson.is_completed ? "Concluida" : lesson.is_locked ? "Bloqueada" : "Disponivel"}
                       </Text>
                     </View>
-                    <Text style={styles.lessonObjective}>{lesson.objective}</Text>
+                    <Text style={[styles.lessonObjective, { color: colors.textSecondary }]}>{lesson.objective}</Text>
                     <View style={styles.lessonFooter}>
-                      <Text style={styles.lessonXp}>+{lesson.xp_reward} XP</Text>
+                      <Text style={[styles.lessonXp, { color: colors.primary }]}>+{lesson.xp_reward} XP</Text>
                       <Pressable
                         disabled={lesson.is_locked}
                         onPress={() => router.push(`/lesson/${lesson.slug}`)}
-                        style={[styles.openButton, lesson.is_locked && styles.openButtonDisabled]}
+                        style={[styles.openButton, { backgroundColor: colors.primary }, lesson.is_locked && styles.openButtonDisabled]}
                       >
                         <Text style={styles.openButtonText}>Questoes</Text>
                       </Pressable>

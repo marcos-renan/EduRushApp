@@ -4,11 +4,62 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "
 import { GradientScreen } from "../../src/components/GradientScreen";
 import { getTrails } from "../../src/services/api/trails";
 import { useAuthStore } from "../../src/store/auth-store";
+import { useAppTheme } from "../../src/theme/app-theme";
 import { palette } from "../../src/theme/palette";
 import type { TrailItem } from "../../src/types/api";
 
-export default function TrilhasScreen() {
+type SubjectGroup = {
+  external_id: string;
+  name: string;
+  slug: string;
+  trails_count: number;
+  lessons_count: number;
+  completed_lessons_count: number;
+  progress_percent: number;
+};
+
+function groupTrailsBySubject(trails: TrailItem[]): SubjectGroup[] {
+  const grouped = new Map<string, SubjectGroup>();
+
+  for (const trail of trails) {
+    const key = trail.subject.slug || trail.subject.external_id;
+    const current = grouped.get(key);
+
+    if (!current) {
+      grouped.set(key, {
+        external_id: trail.subject.external_id,
+        name: trail.subject.name,
+        slug: trail.subject.slug,
+        trails_count: 1,
+        lessons_count: trail.lessons_count,
+        completed_lessons_count: trail.completed_lessons_count,
+        progress_percent: 0,
+      });
+      continue;
+    }
+
+    current.trails_count += 1;
+    current.lessons_count += trail.lessons_count;
+    current.completed_lessons_count += trail.completed_lessons_count;
+  }
+
+  const result = Array.from(grouped.values()).map((item) => {
+    const progress = item.lessons_count > 0
+      ? Math.round((item.completed_lessons_count / item.lessons_count) * 100)
+      : 0;
+
+    return {
+      ...item,
+      progress_percent: progress,
+    };
+  });
+
+  return result.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export default function MateriasScreen() {
   const token = useAuthStore((state) => state.token);
+  const { colors } = useAppTheme();
 
   const trailsQuery = useQuery({
     queryKey: ["trails", token],
@@ -16,24 +67,26 @@ export default function TrilhasScreen() {
     enabled: !!token,
   });
 
-  const renderTrail = ({ item }: { item: TrailItem }) => {
-    const percent = item.lessons_count
-      ? Math.round((item.completed_lessons_count / item.lessons_count) * 100)
-      : 0;
+  const subjects = groupTrailsBySubject(trailsQuery.data?.data ?? []);
+
+  const renderSubject = ({ item }: { item: SubjectGroup }) => {
+    const percent = item.progress_percent;
 
     return (
-      <Pressable style={styles.card} onPress={() => router.push(`/trail/${item.slug}`)}>
-        <Text style={styles.subject}>{item.subject.name}</Text>
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.description}>{item.description}</Text>
+      <Pressable style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]} onPress={() => router.push(`/subject/${item.slug}`)}>
+        <Text style={[styles.subject, { color: colors.primary }]}>Materia</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>{item.name}</Text>
+        <Text style={[styles.description, { color: colors.textSecondary }]}>
+          {item.trails_count} trilha(s) disponivel(is) para voce estudar.
+        </Text>
 
         <View style={styles.progressRow}>
-          <Text style={styles.progressText}>
-            {item.completed_lessons_count}/{item.lessons_count} licoes
+          <Text style={[styles.progressText, { color: colors.textSecondary }]}>
+            {item.completed_lessons_count}/{item.lessons_count} licoes concluidas
           </Text>
-          <Text style={styles.progressText}>{percent}%</Text>
+          <Text style={[styles.progressText, { color: colors.textSecondary }]}>{percent}%</Text>
         </View>
-        <View style={styles.progressBar}>
+        <View style={[styles.progressBar, { backgroundColor: colors.cardMutedBackground }]}>
           <View style={[styles.progressFill, { width: `${percent}%` }]} />
         </View>
       </Pressable>
@@ -43,29 +96,34 @@ export default function TrilhasScreen() {
   return (
     <GradientScreen>
       <View style={styles.wrapper}>
-        <Text style={styles.screenTitle}>Suas Trilhas</Text>
-        <Text style={styles.screenSubtitle}>Escolha uma trilha e avance por licoes e questoes.</Text>
+        <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Materias</Text>
+        <Text style={[styles.screenSubtitle, { color: colors.textSecondary }]}>Escolha uma materia para ver as trilhas e iniciar as licoes.</Text>
 
         {trailsQuery.isLoading ? (
           <View style={styles.centered}>
             <ActivityIndicator size="large" color={palette.blue700} />
-            <Text style={styles.centeredText}>Carregando trilhas...</Text>
+            <Text style={styles.centeredText}>Carregando materias...</Text>
           </View>
         ) : null}
 
         {trailsQuery.isError ? (
           <View style={styles.centered}>
-            <Text style={styles.errorText}>Nao foi possivel carregar as trilhas.</Text>
+            <Text style={styles.errorText}>Nao foi possivel carregar as materias.</Text>
           </View>
         ) : null}
 
         {trailsQuery.data ? (
           <FlatList
-            data={trailsQuery.data.data}
+            data={subjects}
             keyExtractor={(item) => item.external_id}
-            renderItem={renderTrail}
+            renderItem={renderSubject}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.centered}>
+                <Text style={styles.centeredText}>Nenhuma materia disponivel no momento.</Text>
+              </View>
+            }
           />
         ) : null}
       </View>
