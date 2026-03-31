@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
@@ -9,7 +8,6 @@ import {
   acceptFriendRequest,
   getFriendRequests,
   getFriends,
-  getFriendsRanking,
   rejectFriendRequest,
   removeFriend,
   searchFriends,
@@ -28,6 +26,8 @@ type DialogState = {
   variant: StyledDialogVariant;
   actions: StyledDialogAction[];
 };
+
+type RequestView = "incoming" | "outgoing" | null;
 
 function Avatar({ member }: { member: FriendMember }) {
   const { colors } = useAppTheme();
@@ -54,6 +54,8 @@ export default function FriendsScreen() {
 
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [requestView, setRequestView] = useState<RequestView>(null);
+  const [pendingRemoveFriend, setPendingRemoveFriend] = useState<FriendMember | null>(null);
   const [dialogState, setDialogState] = useState<DialogState>({
     visible: false,
     title: "",
@@ -72,12 +74,42 @@ export default function FriendsScreen() {
     });
   };
 
+  const askRemoveFriend = (friend: FriendMember) => {
+    setPendingRemoveFriend(friend);
+    setDialogState({
+      visible: true,
+      title: "Tem certeza disso?",
+      message: `Voce vai remover ${friend.user.name} da sua lista de amigos.`,
+      variant: "warning",
+      actions: [
+        {
+          label: "Cancelar",
+          kind: "secondary",
+          onPress: () => {
+            setPendingRemoveFriend(null);
+            closeDialog();
+          },
+        },
+        {
+          label: "Remover",
+          kind: "danger",
+          onPress: () => {
+            const target = pendingRemoveFriend ?? friend;
+            setPendingRemoveFriend(null);
+            closeDialog();
+            removeMutation.mutate(target.user.external_id);
+          },
+        },
+      ],
+    });
+  };
+
   const refreshAll = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["friends", token] }),
       queryClient.invalidateQueries({ queryKey: ["friend-requests", token] }),
-      queryClient.invalidateQueries({ queryKey: ["friends-ranking", token] }),
       queryClient.invalidateQueries({ queryKey: ["friends-search", token] }),
+      queryClient.invalidateQueries({ queryKey: ["friends-ranking", token] }),
     ]);
   };
 
@@ -90,12 +122,6 @@ export default function FriendsScreen() {
   const requestsQuery = useQuery({
     queryKey: ["friend-requests", token],
     queryFn: () => getFriendRequests(token!),
-    enabled: !!token,
-  });
-
-  const rankingQuery = useQuery({
-    queryKey: ["friends-ranking", token],
-    queryFn: () => getFriendsRanking(token!),
     enabled: !!token,
   });
 
@@ -120,7 +146,7 @@ export default function FriendsScreen() {
     mutationFn: (requestExternalId: string) => acceptFriendRequest(token!, requestExternalId),
     onSuccess: async () => {
       await refreshAll();
-      showDialog("Pedido aceito", "Agora voces estao conectados no ranking.", "success");
+      showDialog("Pedido aceito", "Agora voces estao conectados.", "success");
     },
     onError: (error) => showDialog("Falha ao aceitar", extractApiError(error), "error"),
   });
@@ -138,17 +164,22 @@ export default function FriendsScreen() {
     mutationFn: (friendExternalId: string) => removeFriend(token!, friendExternalId),
     onSuccess: async () => {
       await refreshAll();
-      showDialog("Amigo removido", "A conexao foi removida do seu ranking.", "info");
+      showDialog("Amigo removido", "A conexao foi removida da sua lista.", "info");
     },
     onError: (error) => showDialog("Falha ao remover", extractApiError(error), "error"),
   });
 
   const incomingRequests = requestsQuery.data?.data.incoming ?? [];
   const outgoingRequests = requestsQuery.data?.data.outgoing ?? [];
-  const friends = friendsQuery.data?.data ?? [];
-  const ranking = rankingQuery.data?.data ?? [];
   const searchResults = searchQuery.data?.data ?? [];
-  const loading = friendsQuery.isLoading || requestsQuery.isLoading || rankingQuery.isLoading;
+  const friends = useMemo(
+    () =>
+      [...(friendsQuery.data?.data ?? [])].sort((a, b) =>
+        a.user.name.localeCompare(b.user.name, "pt-BR", { sensitivity: "base" })
+      ),
+    [friendsQuery.data?.data]
+  );
+  const loading = friendsQuery.isLoading || requestsQuery.isLoading;
 
   const isBusy = useMemo(
     () =>
@@ -167,7 +198,7 @@ export default function FriendsScreen() {
           <EnergyChip value={profile?.energy ?? 0} />
         </View>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Busque por @usuario, adicione amigos e compita no ranking.
+          Busque por @usuario e organize suas amizades.
         </Text>
 
         <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
@@ -231,7 +262,7 @@ export default function FriendsScreen() {
                       status === "friends" ? { color: colors.textSecondary } : { color: palette.white },
                     ]}
                   >
-                    {status === "friends" ? "Amigo" : status === "sent" ? "Enviado" : status === "received" ? "Responder abaixo" : "Adicionar"}
+                    {status === "friends" ? "Amigo" : status === "sent" ? "Enviado" : status === "received" ? "Ver pedidos" : "Adicionar"}
                   </Text>
                 </Pressable>
               </View>
@@ -240,50 +271,106 @@ export default function FriendsScreen() {
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Pedidos pendentes</Text>
-          <Text style={[styles.sectionCaption, { color: colors.textSecondary }]}>
-            Recebidos: {incomingRequests.length} | Enviados: {outgoingRequests.length}
-          </Text>
+          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Area de pedidos</Text>
+          <View style={styles.requestButtonsRow}>
+            <Pressable
+              onPress={() => setRequestView((prev) => (prev === "incoming" ? null : "incoming"))}
+              style={({ pressed }) => [
+                styles.requestButton,
+                {
+                  borderColor: requestView === "incoming" ? colors.primary : colors.border,
+                  backgroundColor: requestView === "incoming" ? colors.primarySoft : colors.cardBackground,
+                },
+                pressed && styles.buttonPressed,
+              ]}
+            >
+              <Text style={[styles.requestButtonText, { color: colors.textPrimary }]}>
+                Pendentes ({incomingRequests.length})
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setRequestView((prev) => (prev === "outgoing" ? null : "outgoing"))}
+              style={({ pressed }) => [
+                styles.requestButton,
+                {
+                  borderColor: requestView === "outgoing" ? colors.primary : colors.border,
+                  backgroundColor: requestView === "outgoing" ? colors.primarySoft : colors.cardBackground,
+                },
+                pressed && styles.buttonPressed,
+              ]}
+            >
+              <Text style={[styles.requestButtonText, { color: colors.textPrimary }]}>
+                Enviados ({outgoingRequests.length})
+              </Text>
+            </Pressable>
+          </View>
 
-          {incomingRequests.length === 0 ? (
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Nenhum pedido recebido.</Text>
+          {requestView === "incoming" ? (
+            <>
+              {incomingRequests.length === 0 ? (
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Nenhum pedido pendente.</Text>
+              ) : null}
+
+              {incomingRequests.map((request) => (
+                <View key={request.external_id} style={[styles.memberRow, { borderColor: colors.border }]}>
+                  <View style={styles.memberInfo}>
+                    <Avatar member={request.member} />
+                    <View>
+                      <Text style={[styles.memberName, { color: colors.textPrimary }]}>{request.member.user.name}</Text>
+                      <Text style={[styles.memberHandle, { color: colors.textSecondary }]}>{request.member.user.handle}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.requestActions}>
+                    <Pressable
+                      onPress={() => rejectMutation.mutate(request.external_id)}
+                      disabled={isBusy}
+                      style={({ pressed }) => [
+                        styles.rejectButton,
+                        { borderColor: colors.dangerBorder, backgroundColor: colors.dangerSurface },
+                        pressed && !isBusy && styles.buttonPressed,
+                      ]}
+                    >
+                      <Text style={styles.rejectButtonText}>Recusar</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => acceptMutation.mutate(request.external_id)}
+                      disabled={isBusy}
+                      style={({ pressed }) => [styles.acceptButton, { backgroundColor: colors.primary }, pressed && !isBusy && styles.buttonPressed]}
+                    >
+                      <Text style={styles.acceptButtonText}>Aceitar</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+            </>
           ) : null}
 
-          {incomingRequests.map((request) => (
-            <View key={request.external_id} style={[styles.memberRow, { borderColor: colors.border }]}>
-              <View style={styles.memberInfo}>
-                <Avatar member={request.member} />
-                <View>
-                  <Text style={[styles.memberName, { color: colors.textPrimary }]}>{request.member.user.name}</Text>
-                  <Text style={[styles.memberHandle, { color: colors.textSecondary }]}>{request.member.user.handle}</Text>
+          {requestView === "outgoing" ? (
+            <>
+              {outgoingRequests.length === 0 ? (
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Nenhum pedido enviado.</Text>
+              ) : null}
+
+              {outgoingRequests.map((request) => (
+                <View key={request.external_id} style={[styles.memberRow, { borderColor: colors.border }]}>
+                  <View style={styles.memberInfo}>
+                    <Avatar member={request.member} />
+                    <View>
+                      <Text style={[styles.memberName, { color: colors.textPrimary }]}>{request.member.user.name}</Text>
+                      <Text style={[styles.memberHandle, { color: colors.textSecondary }]}>{request.member.user.handle}</Text>
+                    </View>
+                  </View>
+                  <View style={[styles.pendingTag, { backgroundColor: colors.primarySoft, borderColor: colors.border }]}>
+                    <Text style={[styles.pendingTagText, { color: colors.primary }]}>Aguardando</Text>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.requestActions}>
-                <Pressable
-                  onPress={() => rejectMutation.mutate(request.external_id)}
-                  disabled={isBusy}
-                  style={({ pressed }) => [
-                    styles.rejectButton,
-                    { borderColor: colors.dangerBorder, backgroundColor: colors.dangerSurface },
-                    pressed && !isBusy && styles.buttonPressed,
-                  ]}
-                >
-                  <Text style={styles.rejectButtonText}>Recusar</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => acceptMutation.mutate(request.external_id)}
-                  disabled={isBusy}
-                  style={({ pressed }) => [styles.acceptButton, { backgroundColor: colors.primary }, pressed && !isBusy && styles.buttonPressed]}
-                >
-                  <Text style={styles.acceptButtonText}>Aceitar</Text>
-                </Pressable>
-              </View>
-            </View>
-          ))}
+              ))}
+            </>
+          ) : null}
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Seus amigos</Text>
+          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Seus amigos (A-Z)</Text>
 
           {friends.length === 0 ? (
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Voce ainda nao adicionou amigos.</Text>
@@ -299,7 +386,7 @@ export default function FriendsScreen() {
                 </View>
               </View>
               <Pressable
-                onPress={() => removeMutation.mutate(friend.user.external_id)}
+                onPress={() => askRemoveFriend(friend)}
                 disabled={isBusy}
                 style={({ pressed }) => [
                   styles.removeButton,
@@ -309,29 +396,6 @@ export default function FriendsScreen() {
               >
                 <Text style={styles.removeButtonText}>Remover</Text>
               </Pressable>
-            </View>
-          ))}
-        </View>
-
-        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Ranking entre amigos</Text>
-          {ranking.map((member) => (
-            <View key={`${member.user.external_id ?? member.user.username}-rank`} style={[styles.rankingRow, { borderColor: colors.border }]}>
-              <View style={styles.rankBadge}>
-                <Text style={[styles.rankText, { color: colors.primary }]}>#{member.rank}</Text>
-              </View>
-              <View style={styles.memberInfo}>
-                <Avatar member={member} />
-                <View>
-                  <Text style={[styles.memberName, { color: colors.textPrimary }]}>
-                    {member.user.name} {member.is_me ? "(voce)" : ""}
-                  </Text>
-                  <Text style={[styles.memberHandle, { color: colors.textSecondary }]}>
-                    {member.user.handle}  |  Nv. {member.stats.level}
-                  </Text>
-                </View>
-              </View>
-              <Text style={[styles.rankXp, { color: colors.primary }]}>{member.stats.total_xp} XP</Text>
             </View>
           ))}
         </View>
@@ -388,10 +452,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "900",
   },
-  sectionCaption: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
   searchRow: {
     flexDirection: "row",
     gap: 8,
@@ -414,6 +474,22 @@ const styles = StyleSheet.create({
   searchButtonText: {
     color: palette.white,
     fontSize: 13,
+    fontWeight: "800",
+  },
+  requestButtonsRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  requestButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  requestButtonText: {
+    fontSize: 12,
     fontWeight: "800",
   },
   memberRow: {
@@ -504,28 +580,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
   },
-  rankingRow: {
+  pendingTag: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 10,
-    paddingVertical: 9,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
+    paddingVertical: 7,
   },
-  rankBadge: {
-    width: 34,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rankText: {
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  rankXp: {
-    marginLeft: "auto",
-    fontSize: 12,
-    fontWeight: "900",
+  pendingTagText: {
+    fontSize: 11,
+    fontWeight: "800",
   },
   loadingInline: {
     flexDirection: "row",
@@ -546,4 +609,3 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
 });
-
