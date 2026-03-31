@@ -12,6 +12,10 @@ export type ApiStudentProfile = {
   level: number;
   total_xp: number;
   current_streak: number;
+  energy: number;
+  energy_regen_cap: number;
+  energy_recovery_minutes: number;
+  energy_next_recharge_at: string | null;
 };
 
 export type LoginResponse = {
@@ -149,6 +153,7 @@ export type LessonQuestionsResponse = {
       };
     };
     questions: LessonQuestion[];
+    student_profile: ApiStudentProfile;
   };
   meta: {
     total_questions: number;
@@ -178,8 +183,10 @@ export type LessonAttemptResponse = {
       score: number;
     };
     progress: {
+      passed: boolean;
       already_completed: boolean;
       earned_xp: number;
+      energy_delta: number;
     };
     student_profile: ApiStudentProfile;
     completed_missions: Array<{

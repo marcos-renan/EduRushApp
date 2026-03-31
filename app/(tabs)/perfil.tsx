@@ -17,6 +17,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { EnergyChip } from "../../src/components/EnergyChip";
 import { GradientScreen } from "../../src/components/GradientScreen";
 import { StyledDialog, type StyledDialogAction, type StyledDialogVariant } from "../../src/components/StyledDialog";
 import { logoutRequest } from "../../src/services/api/auth";
@@ -503,7 +504,10 @@ export default function PerfilScreen() {
   return (
     <GradientScreen>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Perfil</Text>
+        <View style={styles.topRow}>
+          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Perfil</Text>
+          <EnergyChip value={profile?.energy ?? 0} />
+        </View>
         <Text style={[styles.screenSubtitle, { color: colors.textSecondary }]}>Gerencie seus dados e foto da conta.</Text>
 
         <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
@@ -813,6 +817,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 30,
+    gap: 12,
+  },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
   },
   screenTitle: {

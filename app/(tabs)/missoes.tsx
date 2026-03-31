@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { EnergyChip } from "../../src/components/EnergyChip";
 import { GradientScreen } from "../../src/components/GradientScreen";
 import { getMissions } from "../../src/services/api/missions";
 import { getReviewErrors } from "../../src/services/api/review";
@@ -124,6 +125,7 @@ function MissionCard({
 
 export default function MissoesScreen() {
   const token = useAuthStore((state) => state.token);
+  const profile = useAuthStore((state) => state.profile);
   const { colors } = useAppTheme();
 
   const missionsQuery = useQuery({
@@ -152,7 +154,10 @@ export default function MissoesScreen() {
   return (
     <GradientScreen>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Missoes</Text>
+        <View style={styles.topRow}>
+          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Missoes</Text>
+          <EnergyChip value={profile?.energy ?? 0} />
+        </View>
         <Text style={[styles.screenSubtitle, { color: colors.textSecondary }]}>Acompanhe e execute suas missoes por aqui.</Text>
 
         {missionsQuery.isLoading ? (
@@ -171,7 +176,7 @@ export default function MissoesScreen() {
               <View style={styles.sectionList}>
                 {daily.map((mission) => (
                   <MissionCard
-                    key={mission.external_id}
+                    key={`${mission.external_id ?? `${mission.mission_key}-daily`}`}
                     mission={mission}
                     action={missionAction(mission, nextStudyTarget, hasPendingReview)}
                     colors={colors}
@@ -185,7 +190,7 @@ export default function MissoesScreen() {
               <View style={styles.sectionList}>
                 {weekly.map((mission) => (
                   <MissionCard
-                    key={mission.external_id}
+                    key={`${mission.external_id ?? `${mission.mission_key}-weekly`}`}
                     mission={mission}
                     action={missionAction(mission, nextStudyTarget, hasPendingReview)}
                     colors={colors}
@@ -206,6 +211,12 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 30,
     gap: 14,
+  },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
   },
   screenTitle: {
     color: palette.slate900,

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { EnergyChip } from "../../src/components/EnergyChip";
 import { GradientScreen } from "../../src/components/GradientScreen";
 import { getTrails } from "../../src/services/api/trails";
 import { useAuthStore } from "../../src/store/auth-store";
@@ -59,6 +60,7 @@ function groupTrailsBySubject(trails: TrailItem[]): SubjectGroup[] {
 
 export default function MateriasScreen() {
   const token = useAuthStore((state) => state.token);
+  const profile = useAuthStore((state) => state.profile);
   const { colors } = useAppTheme();
 
   const trailsQuery = useQuery({
@@ -96,7 +98,10 @@ export default function MateriasScreen() {
   return (
     <GradientScreen>
       <View style={styles.wrapper}>
-        <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Materias</Text>
+        <View style={styles.topRow}>
+          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Materias</Text>
+          <EnergyChip value={profile?.energy ?? 0} />
+        </View>
         <Text style={[styles.screenSubtitle, { color: colors.textSecondary }]}>Escolha uma materia para ver as trilhas e iniciar as licoes.</Text>
 
         {trailsQuery.isLoading ? (
@@ -115,7 +120,7 @@ export default function MateriasScreen() {
         {trailsQuery.data ? (
           <FlatList
             data={subjects}
-            keyExtractor={(item) => item.external_id}
+            keyExtractor={(item) => `${item.external_id ?? item.slug}`}
             renderItem={renderSubject}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
@@ -136,6 +141,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
+  },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
   },
   screenTitle: {
     color: palette.slate900,

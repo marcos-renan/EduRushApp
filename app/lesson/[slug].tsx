@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import LottieView from "lottie-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { EnergyChip } from "../../src/components/EnergyChip";
 import { GradientScreen } from "../../src/components/GradientScreen";
 import { submitLessonAttempt } from "../../src/services/api/lessons";
 import { extractApiError } from "../../src/services/api/client";
@@ -17,6 +18,7 @@ import type { LessonAttemptResponse, LessonQuestion } from "../../src/types/api"
 export default function LessonQuestionsScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const token = useAuthStore((state) => state.token);
+  const profile = useAuthStore((state) => state.profile);
   const updateProfile = useAuthStore((state) => state.updateProfile);
   const { colors, isDark } = useAppTheme();
   const queryClient = useQueryClient();
@@ -67,6 +69,13 @@ export default function LessonQuestionsScreen() {
   const isLastQuestion = questions.length > 0 && currentIndex === questions.length - 1;
   const hasPassed = !!result && result.quiz.score >= 70;
   const hasFailed = !!result && result.quiz.score < 70;
+
+  useEffect(() => {
+    const profileFromQuestions = questionsQuery.data?.data.student_profile;
+    if (!profileFromQuestions) return;
+
+    void updateProfile(profileFromQuestions);
+  }, [questionsQuery.data, updateProfile]);
 
   useEffect(() => {
     if (!result) {
@@ -170,6 +179,9 @@ export default function LessonQuestionsScreen() {
               <Ionicons name="arrow-back" size={18} color={colors.primary} />
             </Pressable>
             <Text style={[styles.topTitle, { color: colors.textPrimary }]}>Licao</Text>
+            <View style={styles.topEnergy}>
+              <EnergyChip value={profile?.energy ?? 0} />
+            </View>
           </View>
 
           {questionsQuery.isLoading ? (
@@ -180,7 +192,7 @@ export default function LessonQuestionsScreen() {
           ) : null}
 
           {questionsQuery.isError ? (
-            <Text style={styles.errorText}>Não foi possível carregar as questões desta lição.</Text>
+            <Text style={styles.errorText}>{extractApiError(questionsQuery.error)}</Text>
           ) : null}
 
           {questionsQuery.data ? (
@@ -414,6 +426,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+  },
+  topEnergy: {
+    marginLeft: "auto",
   },
   backButton: {
     width: 36,

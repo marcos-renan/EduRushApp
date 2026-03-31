@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { EnergyChip } from "../../src/components/EnergyChip";
 import { GradientScreen } from "../../src/components/GradientScreen";
 import { getTrailBySlug } from "../../src/services/api/trails";
 import { useAuthStore } from "../../src/store/auth-store";
@@ -11,6 +12,7 @@ import { palette } from "../../src/theme/palette";
 export default function TrailDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const token = useAuthStore((state) => state.token);
+  const profile = useAuthStore((state) => state.profile);
   const { colors } = useAppTheme();
 
   const trailQuery = useQuery({
@@ -27,6 +29,9 @@ export default function TrailDetailScreen() {
             <Ionicons name="arrow-back" size={18} color={colors.primary} />
           </Pressable>
           <Text style={[styles.topTitle, { color: colors.textPrimary }]}>Detalhe da trilha</Text>
+          <View style={styles.topEnergy}>
+            <EnergyChip value={profile?.energy ?? 0} />
+          </View>
         </View>
 
         {trailQuery.isLoading ? (
@@ -50,7 +55,10 @@ export default function TrailDetailScreen() {
               <Text style={[styles.sectionTitle, { color: colors.primary }]}>Licoes</Text>
               <View style={styles.lessonList}>
                 {trailQuery.data.data.lessons.map((lesson) => (
-                  <View key={lesson.external_id} style={[styles.lessonCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                  <View
+                    key={`${lesson.external_id ?? lesson.slug ?? `lesson-${lesson.position}`}`}
+                    style={[styles.lessonCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                  >
                     <View style={styles.lessonHeader}>
                       <Text style={[styles.lessonTitle, { color: colors.textPrimary }]}>
                         {lesson.position}. {lesson.title}
@@ -92,6 +100,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+  },
+  topEnergy: {
+    marginLeft: "auto",
   },
   backButton: {
     width: 36,

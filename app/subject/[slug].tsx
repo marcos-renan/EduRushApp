@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { EnergyChip } from "../../src/components/EnergyChip";
 import { GradientScreen } from "../../src/components/GradientScreen";
 import { getTrails } from "../../src/services/api/trails";
 import { useAuthStore } from "../../src/store/auth-store";
@@ -11,6 +12,7 @@ import { palette } from "../../src/theme/palette";
 export default function SubjectDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const token = useAuthStore((state) => state.token);
+  const profile = useAuthStore((state) => state.profile);
   const { colors } = useAppTheme();
 
   const trailsQuery = useQuery({
@@ -30,6 +32,9 @@ export default function SubjectDetailScreen() {
             <Ionicons name="arrow-back" size={18} color={colors.primary} />
           </Pressable>
           <Text style={[styles.topTitle, { color: colors.textPrimary }]}>{subjectName}</Text>
+          <View style={styles.topEnergy}>
+            <EnergyChip value={profile?.energy ?? 0} />
+          </View>
         </View>
 
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Trilhas disponiveis nesta materia.</Text>
@@ -60,7 +65,7 @@ export default function SubjectDetailScreen() {
 
             return (
               <Pressable
-                key={trail.external_id}
+                key={`${trail.external_id ?? trail.slug}`}
                 style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
                 onPress={() => router.push(`/trail/${trail.slug}`)}
               >
@@ -96,6 +101,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+  },
+  topEnergy: {
+    marginLeft: "auto",
   },
   backButton: {
     width: 36,
@@ -182,4 +190,3 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 });
-
