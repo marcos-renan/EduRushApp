@@ -27,6 +27,11 @@ import { palette } from "../../src/theme/palette";
 const schema = z
   .object({
     name: z.string().min(3, "Informe seu nome completo."),
+    username: z
+      .string()
+      .min(3, "Informe um @usuario com pelo menos 3 caracteres.")
+      .max(40, "Seu @usuario pode ter no maximo 40 caracteres.")
+      .regex(/^@?[a-zA-Z0-9._]+$/, "Use apenas letras, numeros, ponto e underscore."),
     email: z.string().email("Digite um e-mail valido."),
     grade_year: z.number().int().min(1).max(3),
     password: z.string().min(6, "A senha precisa ter pelo menos 6 caracteres."),
@@ -61,6 +66,7 @@ export default function RegisterScreen() {
     resolver: zodResolver(schema),
     defaultValues: {
       name: "",
+      username: "",
       email: "",
       grade_year: 1,
       password: "",
@@ -123,6 +129,27 @@ export default function RegisterScreen() {
                 )}
               />
               {errors.name ? <Text style={styles.error}>{errors.name.message}</Text> : null}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>@Usuario</Text>
+              <Controller
+                control={control}
+                name="username"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                    placeholder="@seuusuario"
+                    placeholderTextColor={colors.textMuted}
+                    style={[styles.input, { borderColor: colors.border, backgroundColor: colors.inputBackground, color: colors.inputText }]}
+                  />
+                )}
+              />
+              {errors.username ? <Text style={styles.error}>{errors.username.message}</Text> : null}
             </View>
 
             <View style={styles.field}>

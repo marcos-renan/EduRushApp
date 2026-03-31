@@ -102,6 +102,7 @@ export default function PerfilScreen() {
   const { colors } = useAppTheme();
 
   const [name, setName] = useState(user?.name ?? "");
+  const [username, setUsername] = useState(user?.username ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [gradeYear, setGradeYear] = useState(profile?.grade_year ?? 1);
   const [password, setPassword] = useState("");
@@ -164,6 +165,7 @@ export default function PerfilScreen() {
 
     const response = profileQuery.data.data;
     setName(response.user.name);
+    setUsername(response.user.username ?? "");
     setEmail(response.user.email);
     const currentGradeYear = response.student_profile?.grade_year ?? 1;
     setGradeYear(currentGradeYear);
@@ -267,6 +269,7 @@ export default function PerfilScreen() {
     mutationFn: () =>
       updateProfile(token!, {
         name,
+        username,
         email,
         grade_year: gradeYear,
         password: password.trim() ? password : undefined,
@@ -478,6 +481,15 @@ export default function PerfilScreen() {
       return;
     }
 
+    if (username.trim().length < 3) {
+      openDialog({
+        title: "@Usuario invalido",
+        message: "Informe um @usuario com pelo menos 3 caracteres.",
+        variant: "warning",
+      });
+      return;
+    }
+
     if (password.trim() && password !== passwordConfirmation) {
       openDialog({
         title: "Senhas diferentes",
@@ -542,6 +554,9 @@ export default function PerfilScreen() {
             )}
             <View style={styles.avatarActions}>
               <Text style={[styles.avatarName, { color: colors.textPrimary }]}>{name || user?.name || "Aluno"}</Text>
+              <Text style={[styles.avatarHandle, { color: colors.textSecondary }]}>
+                @{(username || user?.username || "usuario").replace(/^@/, "")}
+              </Text>
               <Pressable
                 onPress={handlePhoto}
                 disabled={photoMutation.isPending}
@@ -574,6 +589,19 @@ export default function PerfilScreen() {
               onChangeText={setName}
               style={[styles.input, { borderColor: colors.border, backgroundColor: colors.inputBackground, color: colors.inputText }]}
               placeholder="Seu nome"
+              placeholderTextColor={colors.textMuted}
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>@Usuario</Text>
+            <TextInput
+              value={username}
+              onChangeText={setUsername}
+              style={[styles.input, { borderColor: colors.border, backgroundColor: colors.inputBackground, color: colors.inputText }]}
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="@seuusuario"
               placeholderTextColor={colors.textMuted}
             />
           </View>
@@ -896,6 +924,12 @@ const styles = StyleSheet.create({
     color: palette.slate900,
     fontSize: 17,
     fontWeight: "900",
+  },
+  avatarHandle: {
+    color: palette.slate700,
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: -4,
   },
   photoButton: {
     alignSelf: "flex-start",

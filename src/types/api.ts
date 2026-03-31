@@ -1,6 +1,7 @@
 export type ApiUser = {
   external_id: string;
   name: string;
+  username: string;
   email: string;
   role: "user" | "admin" | string;
   profile_photo_url?: string | null;
@@ -27,6 +28,7 @@ export type LoginResponse = {
 
 export type RegisterPayload = {
   name: string;
+  username: string;
   email: string;
   password: string;
   password_confirmation: string;
@@ -211,8 +213,77 @@ export type ProfileResponse = {
 
 export type UpdateProfilePayload = {
   name: string;
+  username: string;
   email: string;
   grade_year?: number;
   password?: string;
   password_confirmation?: string;
+};
+
+export type FriendMember = {
+  user: {
+    external_id: string;
+    name: string;
+    username: string;
+    handle: string;
+    profile_photo_url?: string | null;
+  };
+  stats: {
+    grade_year: number;
+    level: number;
+    total_xp: number;
+    current_streak: number;
+  };
+};
+
+export type FriendsSearchResponse = {
+  data: Array<
+    FriendMember & {
+      is_friend: boolean;
+      request_status: "friends" | "sent" | "received" | "none" | string;
+    }
+  >;
+  meta: {
+    query: string;
+    total_results: number;
+  };
+};
+
+export type FriendRequestsResponse = {
+  data: {
+    incoming: Array<{
+      external_id: string;
+      created_at: string | null;
+      member: FriendMember;
+    }>;
+    outgoing: Array<{
+      external_id: string;
+      created_at: string | null;
+      member: FriendMember;
+    }>;
+  };
+  meta: {
+    incoming_total: number;
+    outgoing_total: number;
+  };
+};
+
+export type FriendsListResponse = {
+  data: FriendMember[];
+  meta: {
+    total_friends: number;
+  };
+};
+
+export type FriendsRankingResponse = {
+  data: Array<
+    FriendMember & {
+      rank: number;
+      is_me: boolean;
+    }
+  >;
+  meta: {
+    total_members: number;
+    total_friends: number;
+  };
 };
