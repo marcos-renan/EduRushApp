@@ -9,11 +9,62 @@ import { useAuthStore } from "../../src/store/auth-store";
 import { useAppTheme } from "../../src/theme/app-theme";
 import { palette } from "../../src/theme/palette";
 
+type DifficultyTier = "easy" | "medium" | "hard";
+
+function mapLessonDifficultyToTier(value?: string): DifficultyTier {
+  const normalized = (value ?? "").toLowerCase().trim();
+
+  if (["hard", "advanced", "dificil"].includes(normalized)) return "hard";
+  if (["medium", "intermediate", "medio"].includes(normalized)) return "medium";
+  return "easy";
+}
+
+function resolveTrailDifficulty(trail: { lessons: Array<{ difficulty?: string }>; difficulty?: string }): DifficultyTier {
+  const trailDifficulty = (trail.difficulty ?? "").toLowerCase().trim();
+  if (trailDifficulty) return mapLessonDifficultyToTier(trailDifficulty);
+
+  if (!trail.lessons?.length) return "easy";
+
+  if (trail.lessons.some((lesson) => mapLessonDifficultyToTier(lesson.difficulty) === "hard")) return "hard";
+  if (trail.lessons.some((lesson) => mapLessonDifficultyToTier(lesson.difficulty) === "medium")) return "medium";
+  return "easy";
+}
+
+function difficultyUi(tier: DifficultyTier, isDark: boolean) {
+  if (tier === "hard") {
+    return {
+      label: "Dificil",
+      borderColor: palette.danger,
+      backgroundColor: isDark ? "#2A1720" : "#FFF0F3",
+      textColor: isDark ? "#FFB6C3" : "#AA2343",
+      progressColor: "#F06A85",
+    };
+  }
+
+  if (tier === "medium") {
+    return {
+      label: "Medio",
+      borderColor: palette.warning,
+      backgroundColor: isDark ? "#2D2415" : "#FFF7E6",
+      textColor: isDark ? "#FFD999" : "#9A6200",
+      progressColor: "#FFBF3D",
+    };
+  }
+
+  return {
+    label: "Facil",
+    borderColor: palette.success,
+    backgroundColor: isDark ? "#13281F" : "#ECFAF3",
+    textColor: isDark ? "#9BE8C8" : "#0A7A4F",
+    progressColor: "#21C489",
+  };
+}
+
 export default function SubjectDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const token = useAuthStore((state) => state.token);
   const profile = useAuthStore((state) => state.profile);
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
 
   const trailsQuery = useQuery({
     queryKey: ["subject-trails", slug, token],
@@ -62,13 +113,20 @@ export default function SubjectDetailScreen() {
             const percent = trail.lessons_count
               ? Math.round((trail.completed_lessons_count / trail.lessons_count) * 100)
               : 0;
+            const tier = resolveTrailDifficulty(trail);
+            const ui = difficultyUi(tier, isDark);
 
             return (
               <Pressable
                 key={`${trail.external_id ?? trail.slug}`}
-                style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                style={[styles.card, { backgroundColor: ui.backgroundColor, borderColor: ui.borderColor }]}
                 onPress={() => router.push(`/trail/${trail.slug}`)}
               >
+                <View style={styles.cardTopRow}>
+                  <View style={[styles.difficultyBadge, { borderColor: ui.borderColor, backgroundColor: colors.cardBackground }]}>
+                    <Text style={[styles.difficultyBadgeText, { color: ui.textColor }]}>{ui.label}</Text>
+                  </View>
+                </View>
                 <Text style={[styles.title, { color: colors.textPrimary }]}>{trail.title}</Text>
                 <Text style={[styles.description, { color: colors.textSecondary }]}>{trail.description}</Text>
 
@@ -79,7 +137,7 @@ export default function SubjectDetailScreen() {
                   <Text style={[styles.progressText, { color: colors.textSecondary }]}>{percent}%</Text>
                 </View>
                 <View style={[styles.progressBar, { backgroundColor: colors.cardMutedBackground }]}>
-                  <View style={[styles.progressFill, { width: `${percent}%` }]} />
+                  <View style={[styles.progressFill, { width: `${percent}%`, backgroundColor: ui.progressColor }]} />
                 </View>
               </Pressable>
             );
@@ -128,6 +186,22 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     padding: 14,
+  },
+  cardTopRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginBottom: 4,
+  },
+  difficultyBadge: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  difficultyBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.2,
   },
   title: {
     fontSize: 16,

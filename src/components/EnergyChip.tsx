@@ -1,5 +1,5 @@
 import LottieView from "lottie-react-native";
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Easing, Image, StyleSheet, Text, View } from "react-native";
 import { useAppTheme } from "../theme/app-theme";
 
@@ -9,65 +9,75 @@ type EnergyChipProps = {
 
 const SLOT_HEIGHT = 16;
 
-export function EnergyChip({ value }: EnergyChipProps) {
+export const EnergyChip = memo(function EnergyChip({ value }: EnergyChipProps) {
   const safeValue = Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
   const { colors } = useAppTheme();
 
   const [displayValue, setDisplayValue] = useState(safeValue);
   const [incomingValue, setIncomingValue] = useState<number | null>(null);
   const [direction, setDirection] = useState<1 | -1>(1);
-  const [showPulse, setShowPulse] = useState(false);
-  const [pulseKey, setPulseKey] = useState(0);
-  const previousValueRef = useRef(safeValue);
+  const committedValueRef = useRef(safeValue);
+  const targetValueRef = useRef(safeValue);
+  const isAnimatingRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const pulseRef = useRef<LottieView>(null);
 
   const slide = useRef(new Animated.Value(0)).current;
-  const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    const previousValue = previousValueRef.current;
-
-    if (safeValue === previousValue) {
+  const animateToLatestValue = useCallback(() => {
+    if (isAnimatingRef.current || !isMountedRef.current) {
       return;
     }
 
-    previousValueRef.current = safeValue;
-    const nextDirection: 1 | -1 = safeValue > previousValue ? 1 : -1;
+    const from = committedValueRef.current;
+    const to = targetValueRef.current;
+    if (from === to) {
+      return;
+    }
 
-    setDisplayValue(previousValue);
+    isAnimatingRef.current = true;
+    const nextDirection: 1 | -1 = to > from ? 1 : -1;
+    setDisplayValue(from);
     setDirection(nextDirection);
-    setIncomingValue(safeValue);
+    setIncomingValue(to);
     slide.setValue(0);
 
     Animated.timing(slide, {
       toValue: 1,
-      duration: 190,
+      duration: 180,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
-    }).start(() => {
-      setDisplayValue(safeValue);
+    }).start(({ finished }) => {
+      if (!finished || !isMountedRef.current) {
+        return;
+      }
+
+      committedValueRef.current = to;
+      setDisplayValue(to);
       setIncomingValue(null);
       slide.setValue(0);
+
+      pulseRef.current?.reset();
+      pulseRef.current?.play();
+
+      isAnimatingRef.current = false;
+      if (targetValueRef.current !== to) {
+        animateToLatestValue();
+      }
     });
+  }, [slide]);
 
-    setShowPulse(true);
-    setPulseKey((prev) => prev + 1);
-
-    if (pulseTimerRef.current) {
-      clearTimeout(pulseTimerRef.current);
-    }
-
-    pulseTimerRef.current = setTimeout(() => {
-      setShowPulse(false);
-    }, 650);
-  }, [safeValue, slide]);
+  useEffect(() => {
+    targetValueRef.current = safeValue;
+    animateToLatestValue();
+  }, [animateToLatestValue, safeValue]);
 
   useEffect(() => {
     return () => {
-      if (pulseTimerRef.current) {
-        clearTimeout(pulseTimerRef.current);
-      }
+      isMountedRef.current = false;
+      slide.stopAnimation();
     };
-  }, []);
+  }, [slide]);
 
   const outgoingTranslateY = slide.interpolate({
     inputRange: [0, 1],
@@ -83,17 +93,18 @@ export function EnergyChip({ value }: EnergyChipProps) {
     <View style={[styles.chip, { backgroundColor: colors.cardMutedBackground, borderColor: colors.border }]}>
       <View style={styles.iconWrap}>
         <Image source={require("../../assets/icons/energy.png")} style={styles.icon} />
-        {showPulse ? (
-          <View pointerEvents="none" style={styles.pulseWrap}>
-            <LottieView
-              key={`energy-pulse-${pulseKey}`}
-              source={require("../../assets/animations/energy.json")}
-              autoPlay
-              loop={false}
-              style={styles.pulse}
-            />
-          </View>
-        ) : null}
+        <View pointerEvents="none" style={styles.pulseWrap}>
+          <LottieView
+            ref={pulseRef}
+            source={require("../../assets/animations/energy.json")}
+            autoPlay={false}
+            loop={false}
+            cacheComposition
+            renderMode="HARDWARE"
+            hardwareAccelerationAndroid
+            style={styles.pulse}
+          />
+        </View>
       </View>
 
       <View style={styles.slotViewport}>
@@ -123,7 +134,7 @@ export function EnergyChip({ value }: EnergyChipProps) {
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   chip: {
@@ -155,6 +166,7 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: "center",
     justifyContent: "center",
+    opacity: 0.9,
   },
   pulse: {
     width: 36,
@@ -162,15 +174,17 @@ const styles = StyleSheet.create({
   },
   slotViewport: {
     height: SLOT_HEIGHT,
-    minWidth: 14,
+    minWidth: 20,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
   },
   valueText: {
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "800",
     lineHeight: SLOT_HEIGHT,
+    textAlign: "center",
+    fontVariant: ["tabular-nums"],
   },
   incomingValue: {
     position: "absolute",

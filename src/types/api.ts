@@ -54,6 +54,7 @@ export type TrailItem = {
   slug: string;
   description: string;
   grade_year?: number;
+  difficulty?: "basic" | "intermediate" | "advanced" | "easy" | "medium" | "hard" | string;
   subject: {
     external_id: string;
     name: string;
@@ -233,6 +234,15 @@ export type FriendMember = {
     level: number;
     total_xp: number;
     current_streak: number;
+    lessons_per_day: Array<{
+      date: string;
+      lessons_completed: number;
+    }>;
+    badges: Array<{
+      name: string;
+      icon?: string;
+      color_hex?: string;
+    }>;
   };
 };
 
