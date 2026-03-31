@@ -178,6 +178,15 @@ export default function PerfilScreen() {
     return `${rawUrl}${separator}v=${avatarVersion}`;
   }, [profileQuery.data, user?.profile_photo_url, avatarVersion]);
 
+  const savedName = useMemo(
+    () => (user?.name?.trim() || profileQuery.data?.data.user.name?.trim() || "Aluno"),
+    [profileQuery.data, user?.name]
+  );
+  const savedUsername = useMemo(
+    () => (user?.username?.trim() || profileQuery.data?.data.user.username?.trim() || "usuario").replace(/^@/, ""),
+    [profileQuery.data, user?.username]
+  );
+
   const cropMetrics = useMemo(() => computeCropMetrics(pendingImage, cropZoom), [pendingImage, cropZoom]);
 
   const setCropOffsetSynced = useCallback((nextOffset: { x: number; y: number }) => {
@@ -548,14 +557,14 @@ export default function PerfilScreen() {
             ) : (
               <View style={[styles.avatarFallback, { backgroundColor: colors.primarySoft, borderColor: colors.border }]}>
                 <Text style={[styles.avatarFallbackText, { color: colors.primary }]}>
-                  {(name?.trim()?.charAt(0) || user?.name?.charAt(0) || "U").toUpperCase()}
+                  {(savedName.charAt(0) || "U").toUpperCase()}
                 </Text>
               </View>
             )}
             <View style={styles.avatarActions}>
-              <Text style={[styles.avatarName, { color: colors.textPrimary }]}>{name || user?.name || "Aluno"}</Text>
+              <Text style={[styles.avatarName, { color: colors.textPrimary }]}>{savedName}</Text>
               <Text style={[styles.avatarHandle, { color: colors.textSecondary }]}>
-                @{(username || user?.username || "usuario").replace(/^@/, "")}
+                @{savedUsername}
               </Text>
               <Pressable
                 onPress={handlePhoto}
