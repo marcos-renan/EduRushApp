@@ -1,15 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAudioPlayer } from "expo-audio";
 import { router, useLocalSearchParams } from "expo-router";
 import LottieView from "lottie-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { EnergyChip } from "../../src/components/EnergyChip";
 import { GradientScreen } from "../../src/components/GradientScreen";
 import { submitLessonAttempt } from "../../src/services/api/lessons";
 import { extractApiError } from "../../src/services/api/client";
 import { getLessonQuestions } from "../../src/services/api/questions";
+import { getTrails } from "../../src/services/api/trails";
 import { useAuthStore } from "../../src/store/auth-store";
 import { useAppTheme } from "../../src/theme/app-theme";
 import { palette } from "../../src/theme/palette";
@@ -22,13 +24,16 @@ export default function LessonQuestionsScreen() {
   const updateProfile = useAuthStore((state) => state.updateProfile);
   const { colors, isDark } = useAppTheme();
   const queryClient = useQueryClient();
+  const navigation = useNavigation();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answersByQuestion, setAnswersByQuestion] = useState<Record<string, number>>({});
   const [checkedByQuestion, setCheckedByQuestion] = useState<Record<string, boolean>>({});
   const [isCorrectByQuestion, setIsCorrectByQuestion] = useState<Record<string, boolean>>({});
   const [result, setResult] = useState<LessonAttemptResponse["data"] | null>(null);
+  const [isExitModalVisible, setIsExitModalVisible] = useState(false);
   const playedPassSoundRef = useRef(false);
+  const bypassExitGuardRef = useRef(false);
   const correctPlayer = useAudioPlayer(require("../../assets/sounds/correct.mpeg"), {
     keepAudioSessionActive: true,
   });
@@ -60,6 +65,11 @@ export default function LessonQuestionsScreen() {
     queryFn: () => getLessonQuestions(token!, slug),
     enabled: !!token && !!slug,
   });
+  const trailsQuery = useQuery({
+    queryKey: ["trails", token],
+    queryFn: () => getTrails(token!),
+    enabled: !!token,
+  });
 
   const questions = questionsQuery.data?.data.questions ?? [];
   const currentQuestion = questions[currentIndex];
@@ -69,6 +79,54 @@ export default function LessonQuestionsScreen() {
   const isLastQuestion = questions.length > 0 && currentIndex === questions.length - 1;
   const hasPassed = !!result && result.quiz.score >= 70;
   const hasFailed = !!result && result.quiz.score < 70;
+  const answeredCount = useMemo(() => Object.keys(answersByQuestion).length, [answersByQuestion]);
+  const hasInProgressAnswers = answeredCount > 0 && !result;
+  const nextProgressTarget = useMemo(() => {
+    if (!slug) return null;
+
+    const trails = trailsQuery.data?.data ?? [];
+    if (!trails.length) return null;
+
+    let currentTrailIndex = -1;
+    let currentLessonIndex = -1;
+
+    for (let trailIndex = 0; trailIndex < trails.length; trailIndex += 1) {
+      const lessonIndex = trails[trailIndex].lessons.findIndex((lesson) => lesson.slug === slug);
+      if (lessonIndex >= 0) {
+        currentTrailIndex = trailIndex;
+        currentLessonIndex = lessonIndex;
+        break;
+      }
+    }
+
+    if (currentTrailIndex < 0 || currentLessonIndex < 0) {
+      return null;
+    }
+
+    const currentTrail = trails[currentTrailIndex];
+    const nextLessonInTrail = currentTrail.lessons[currentLessonIndex + 1];
+
+    if (nextLessonInTrail?.slug) {
+      return {
+        kind: "lesson" as const,
+        label: "Proxima licao",
+        slug: nextLessonInTrail.slug,
+      };
+    }
+
+    for (let trailIndex = currentTrailIndex + 1; trailIndex < trails.length; trailIndex += 1) {
+      const nextTrail = trails[trailIndex];
+      if (nextTrail?.slug) {
+        return {
+          kind: "trail" as const,
+          label: "Ir para a proxima trilha",
+          slug: nextTrail.slug,
+        };
+      }
+    }
+
+    return null;
+  }, [slug, trailsQuery.data]);
 
   useEffect(() => {
     const profileFromQuestions = questionsQuery.data?.data.student_profile;
@@ -95,6 +153,24 @@ export default function LessonQuestionsScreen() {
       })();
     }
   }, [hasPassed, result, winPlayer]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (event) => {
+      if (bypassExitGuardRef.current) {
+        bypassExitGuardRef.current = false;
+        return;
+      }
+
+      if (!hasInProgressAnswers) {
+        return;
+      }
+
+      event.preventDefault();
+      setIsExitModalVisible(true);
+    });
+
+    return unsubscribe;
+  }, [hasInProgressAnswers, navigation]);
 
   const submitPayload = useMemo(
     () => ({
@@ -170,12 +246,45 @@ export default function LessonQuestionsScreen() {
     setIsCorrectByQuestion({});
   };
 
+  const handleContinueAfterPass = () => {
+    if (!nextProgressTarget) {
+      router.back();
+      return;
+    }
+
+    if (nextProgressTarget.kind === "lesson") {
+      router.replace(`/lesson/${nextProgressTarget.slug}`);
+      return;
+    }
+
+    router.replace(`/trail/${nextProgressTarget.slug}`);
+  };
+
+  const handleTryLeaveLesson = () => {
+    if (!hasInProgressAnswers) {
+      router.back();
+      return;
+    }
+
+    setIsExitModalVisible(true);
+  };
+
+  const handleContinueLesson = () => {
+    setIsExitModalVisible(false);
+  };
+
+  const handleConfirmLeaveLesson = () => {
+    setIsExitModalVisible(false);
+    bypassExitGuardRef.current = true;
+    router.back();
+  };
+
   return (
     <GradientScreen>
       <View style={styles.screen}>
         <ScrollView contentContainerStyle={styles.container}>
           <View style={styles.topRow}>
-            <Pressable onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Pressable onPress={handleTryLeaveLesson} style={[styles.backButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
               <Ionicons name="arrow-back" size={18} color={colors.primary} />
             </Pressable>
             <Text style={[styles.topTitle, { color: colors.textPrimary }]}>Licao</Text>
@@ -254,8 +363,8 @@ export default function LessonQuestionsScreen() {
                       <Pressable onPress={resetAttempt} style={styles.secondaryButton}>
                         <Text style={styles.secondaryButtonText}>Refazer</Text>
                       </Pressable>
-                      <Pressable onPress={() => router.back()} style={styles.primaryButton}>
-                        <Text style={styles.primaryButtonText}>Voltar</Text>
+                      <Pressable onPress={handleContinueAfterPass} style={styles.primaryButton}>
+                        <Text style={styles.primaryButtonText}>{nextProgressTarget?.label ?? "Voltar"}</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -407,6 +516,47 @@ export default function LessonQuestionsScreen() {
             />
           </View>
         ) : null}
+
+        <Modal
+          visible={isExitModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={handleContinueLesson}
+        >
+          <View style={styles.exitModalOverlay}>
+            <Pressable style={styles.exitModalBackdrop} onPress={handleContinueLesson} />
+            <View style={[styles.exitModalCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <Image source={require("../../assets/images/thoughtful.png")} style={styles.exitModalImage} resizeMode="contain" />
+              <Text style={[styles.exitModalTitle, { color: colors.textPrimary }]}>Tem certeza que deseja sair?</Text>
+              <Text style={[styles.exitModalDescription, { color: colors.textSecondary }]}>
+                Todo o progresso dessa lição será perdido!
+              </Text>
+
+              <View style={styles.exitModalActions}>
+                <Pressable
+                  onPress={handleContinueLesson}
+                  style={({ pressed }) => [
+                    styles.exitModalSecondaryButton,
+                    { borderColor: colors.border, backgroundColor: colors.cardBackground },
+                    pressed && styles.buttonPressed,
+                  ]}
+                >
+                  <Text style={[styles.exitModalSecondaryButtonText, { color: colors.textPrimary }]}>Continuar lição</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleConfirmLeaveLesson}
+                  style={({ pressed }) => [
+                    styles.exitModalPrimaryButton,
+                    { backgroundColor: palette.danger },
+                    pressed && styles.buttonPressed,
+                  ]}
+                >
+                  <Text style={styles.exitModalPrimaryButtonText}>Sair da lição</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </GradientScreen>
   );
@@ -720,5 +870,70 @@ const styles = StyleSheet.create({
   confettiAnimation: {
     width: "100%",
     height: "100%",
+  },
+  exitModalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  exitModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(5, 12, 28, 0.6)",
+  },
+  exitModalCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 16,
+    alignItems: "center",
+    gap: 8,
+  },
+  exitModalImage: {
+    width: 112,
+    height: 112,
+    marginBottom: 2,
+  },
+  exitModalTitle: {
+    fontSize: 20,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  exitModalDescription: {
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 20,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  exitModalActions: {
+    width: "100%",
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 2,
+  },
+  exitModalSecondaryButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 11,
+    paddingHorizontal: 8,
+  },
+  exitModalSecondaryButtonText: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  exitModalPrimaryButton: {
+    flex: 1,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 11,
+    paddingHorizontal: 8,
+  },
+  exitModalPrimaryButtonText: {
+    color: palette.white,
+    fontSize: 13,
+    fontWeight: "900",
   },
 });
