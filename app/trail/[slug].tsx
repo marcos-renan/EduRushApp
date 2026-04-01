@@ -285,6 +285,8 @@ export default function TrailDetailScreen() {
                 styles.roadmapContainer,
                 {
                   height: roadmapHeight,
+                  backgroundColor: colors.cardBackground,
+                  borderRadius: 20,
                 },
               ]}
             >
@@ -294,6 +296,14 @@ export default function TrailDetailScreen() {
                 const dy = next.y - point.y;
                 const length = Math.hypot(dx, dy);
                 const angle = Math.atan2(dy, dx);
+                const isSegmentProgressed = !!lessons[index]?.is_completed;
+                const segmentColor = isSegmentProgressed
+                  ? isDark
+                    ? "#1E9E6A"
+                    : "#1DBC80"
+                  : isDark
+                    ? "rgba(140, 196, 255, 0.42)"
+                    : palette.blue300;
 
                 return (
                   <View
@@ -304,7 +314,7 @@ export default function TrailDetailScreen() {
                         left: point.x,
                         top: point.y,
                         width: length,
-                        backgroundColor: colors.cardMutedBackground,
+                        backgroundColor: segmentColor,
                         transform: [{ translateY: -ROAD_STROKE / 2 }, { rotateZ: `${angle}rad` }],
                       },
                     ]}
@@ -379,18 +389,23 @@ export default function TrailDetailScreen() {
                 <Text style={[styles.modalSecondaryButtonText, { color: colors.textPrimary }]}>Fechar</Text>
               </Pressable>
 
-              <Pressable
-                onPress={startSelectedLesson}
-                disabled={!!selectedLesson?.is_locked}
-                style={({ pressed }) => [
-                  styles.modalPrimaryButton,
-                  { backgroundColor: colors.primary },
-                  selectedLesson?.is_locked && styles.modalPrimaryButtonDisabled,
-                  pressed && !selectedLesson?.is_locked && styles.buttonPressed,
-                ]}
-              >
-                <Text style={styles.modalPrimaryButtonText}>Comecar</Text>
-              </Pressable>
+              {selectedLesson?.is_locked ? (
+                <View style={[styles.modalLockedState, { backgroundColor: colors.cardMutedBackground, borderColor: colors.border }]}>
+                  <Ionicons name="lock-closed" size={16} color={colors.textSecondary} />
+                  <Text style={[styles.modalLockedText, { color: colors.textSecondary }]}>Bloqueado</Text>
+                </View>
+              ) : (
+                <Pressable
+                  onPress={startSelectedLesson}
+                  style={({ pressed }) => [
+                    styles.modalPrimaryButton,
+                    { backgroundColor: colors.primary },
+                    pressed && styles.buttonPressed,
+                  ]}
+                >
+                  <Text style={styles.modalPrimaryButtonText}>Comecar</Text>
+                </Pressable>
+              )}
             </View>
 
             {selectedLesson?.is_locked ? (
@@ -573,6 +588,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 11,
+  },
+  modalLockedState: {
+    flex: 1,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+    paddingVertical: 11,
+  },
+  modalLockedText: {
+    fontSize: 13,
+    fontWeight: "800",
   },
   modalPrimaryButtonDisabled: {
     backgroundColor: palette.slate300,

@@ -77,8 +77,9 @@ export default function LessonQuestionsScreen() {
   const isCurrentChecked = currentQuestion ? !!checkedByQuestion[currentQuestion.external_id] : false;
   const isCurrentCorrect = currentQuestion ? isCorrectByQuestion[currentQuestion.external_id] : false;
   const isLastQuestion = questions.length > 0 && currentIndex === questions.length - 1;
-  const hasPassed = !!result && result.quiz.score >= 70;
-  const hasFailed = !!result && result.quiz.score < 70;
+  const hasPassed = !!result && result.progress.passed;
+  const hasFailed = !!result && !result.progress.passed;
+  const showRetryButton = !!result && result.quiz.score < 100;
   const answeredCount = useMemo(() => Object.keys(answersByQuestion).length, [answersByQuestion]);
   const hasInProgressAnswers = answeredCount > 0 && !result;
   const nextProgressTarget = useMemo(() => {
@@ -127,6 +128,7 @@ export default function LessonQuestionsScreen() {
 
     return null;
   }, [slug, trailsQuery.data]);
+  const showNextButton = !!nextProgressTarget || showRetryButton;
 
   useEffect(() => {
     const profileFromQuestions = questionsQuery.data?.data.student_profile;
@@ -360,12 +362,21 @@ export default function LessonQuestionsScreen() {
                     ) : null}
 
                     <View style={styles.actionsRow}>
-                      <Pressable onPress={resetAttempt} style={styles.secondaryButton}>
-                        <Text style={styles.secondaryButtonText}>Refazer</Text>
-                      </Pressable>
-                      <Pressable onPress={handleContinueAfterPass} style={styles.primaryButton}>
-                        <Text style={styles.primaryButtonText}>{nextProgressTarget?.label ?? "Voltar"}</Text>
-                      </Pressable>
+                      {showRetryButton ? (
+                        <Pressable onPress={resetAttempt} style={styles.secondaryButton}>
+                          <Text style={styles.secondaryButtonText}>Refazer</Text>
+                        </Pressable>
+                      ) : (
+                        <Pressable onPress={() => router.back()} style={styles.secondaryButton}>
+                          <Text style={styles.secondaryButtonText}>Voltar</Text>
+                        </Pressable>
+                      )}
+
+                      {showNextButton ? (
+                        <Pressable onPress={handleContinueAfterPass} style={styles.primaryButton}>
+                          <Text style={styles.primaryButtonText}>{nextProgressTarget?.label ?? "Voltar"}</Text>
+                        </Pressable>
+                      ) : null}
                     </View>
                   </View>
                 ) : hasFailed ? (
