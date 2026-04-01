@@ -119,13 +119,24 @@ export default function SubjectDetailScreen() {
             return (
               <Pressable
                 key={`${trail.external_id ?? trail.slug}`}
-                style={[styles.card, { backgroundColor: ui.backgroundColor, borderColor: ui.borderColor }]}
+                style={[
+                  styles.card,
+                  { backgroundColor: ui.backgroundColor, borderColor: ui.borderColor },
+                  trail.is_locked && styles.cardLocked,
+                ]}
+                disabled={!!trail.is_locked}
                 onPress={() => router.push(`/trail/${trail.slug}`)}
               >
                 <View style={styles.cardTopRow}>
                   <View style={[styles.difficultyBadge, { borderColor: ui.borderColor, backgroundColor: colors.cardBackground }]}>
                     <Text style={[styles.difficultyBadgeText, { color: ui.textColor }]}>{ui.label}</Text>
                   </View>
+                  {trail.is_locked ? (
+                    <View style={[styles.lockedBadge, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                      <Ionicons name="lock-closed" size={12} color={colors.textSecondary} />
+                      <Text style={[styles.lockedBadgeText, { color: colors.textSecondary }]}>Bloqueada</Text>
+                    </View>
+                  ) : null}
                 </View>
                 <Text style={[styles.title, { color: colors.textPrimary }]}>{trail.title}</Text>
                 <Text style={[styles.description, { color: colors.textSecondary }]}>{trail.description}</Text>
@@ -187,10 +198,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 14,
   },
+  cardLocked: {
+    opacity: 0.72,
+  },
   cardTopRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 4,
+    gap: 8,
   },
   difficultyBadge: {
     borderWidth: 1,
@@ -202,6 +218,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.2,
+  },
+  lockedBadge: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  lockedBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
   },
   title: {
     fontSize: 16,

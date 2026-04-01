@@ -55,6 +55,8 @@ export type TrailItem = {
   description: string;
   grade_year?: number;
   difficulty?: "basic" | "intermediate" | "advanced" | "easy" | "medium" | "hard" | string;
+  is_locked?: boolean;
+  is_completed?: boolean;
   subject: {
     external_id: string;
     name: string;
