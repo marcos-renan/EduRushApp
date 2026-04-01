@@ -33,7 +33,7 @@ function resolveTrailDifficulty(trail: { lessons: Array<{ difficulty?: string }>
 function difficultyUi(tier: DifficultyTier, isDark: boolean) {
   if (tier === "hard") {
     return {
-      label: "Dificil",
+      label: "Difícil",
       borderColor: palette.danger,
       backgroundColor: isDark ? "#2A1720" : "#FFF0F3",
       textColor: isDark ? "#FFB6C3" : "#AA2343",
@@ -43,7 +43,7 @@ function difficultyUi(tier: DifficultyTier, isDark: boolean) {
 
   if (tier === "medium") {
     return {
-      label: "Medio",
+      label: "Médio",
       borderColor: palette.warning,
       backgroundColor: isDark ? "#2D2415" : "#FFF7E6",
       textColor: isDark ? "#FFD999" : "#9A6200",
@@ -52,7 +52,7 @@ function difficultyUi(tier: DifficultyTier, isDark: boolean) {
   }
 
   return {
-    label: "Facil",
+    label: "Fácil",
     borderColor: palette.success,
     backgroundColor: isDark ? "#13281F" : "#ECFAF3",
     textColor: isDark ? "#9BE8C8" : "#0A7A4F",
@@ -73,7 +73,7 @@ export default function SubjectDetailScreen() {
   });
 
   const subjectTrails = (trailsQuery.data?.data ?? []).filter((trail) => trail.subject.slug === slug);
-  const subjectName = subjectTrails[0]?.subject.name ?? "Materia";
+  const subjectName = subjectTrails[0]?.subject.name ?? "Matéria";
 
   return (
     <GradientScreen>
@@ -88,7 +88,7 @@ export default function SubjectDetailScreen() {
           </View>
         </View>
 
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Trilhas disponiveis nesta materia.</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Trilhas disponíveis nesta matéria.</Text>
 
         {trailsQuery.isLoading ? (
           <View style={styles.centered}>
@@ -97,13 +97,13 @@ export default function SubjectDetailScreen() {
           </View>
         ) : null}
 
-        {trailsQuery.isError ? <Text style={styles.errorText}>Nao foi possivel carregar as trilhas desta materia.</Text> : null}
+        {trailsQuery.isError ? <Text style={styles.errorText}>Não foi possível carregar as trilhas desta matéria.</Text> : null}
 
         {!trailsQuery.isLoading && !trailsQuery.isError && subjectTrails.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Nenhuma trilha encontrada</Text>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              Esta materia ainda nao possui trilhas ativas para o seu ano.
+              Esta matéria ainda não possui trilhas ativas para o seu ano.
             </Text>
           </View>
         ) : null}
@@ -143,7 +143,7 @@ export default function SubjectDetailScreen() {
 
                 <View style={styles.progressRow}>
                   <Text style={[styles.progressText, { color: colors.textSecondary }]}>
-                    {trail.completed_lessons_count}/{trail.lessons_count} licoes
+                    {trail.completed_lessons_count}/{trail.lessons_count} lições
                   </Text>
                   <Text style={[styles.progressText, { color: colors.textSecondary }]}>{percent}%</Text>
                 </View>
@@ -293,3 +293,4 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 });
+

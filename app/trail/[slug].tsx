@@ -27,9 +27,9 @@ const ROAD_STROKE = 5;
 
 function difficultyLabel(difficulty?: string) {
   const value = (difficulty ?? "").toLowerCase().trim();
-  if (["advanced", "hard", "dificil"].includes(value)) return "Dificil";
-  if (["intermediate", "medium", "medio"].includes(value)) return "Medio";
-  return "Facil";
+  if (["advanced", "hard", "dificil"].includes(value)) return "Difícil";
+  if (["intermediate", "medium", "medio"].includes(value)) return "Médio";
+  return "Fácil";
 }
 
 function buildNodePositions(total: number, width: number) {
@@ -269,7 +269,7 @@ export default function TrailDetailScreen() {
           </View>
         ) : null}
 
-        {trailQuery.isError ? <Text style={styles.errorText}>Nao foi possivel abrir esta trilha.</Text> : null}
+        {trailQuery.isError ? <Text style={styles.errorText}>Não foi possível abrir esta trilha.</Text> : null}
 
         {trailQuery.data ? (
           <>
@@ -349,7 +349,7 @@ export default function TrailDetailScreen() {
         <View style={styles.modalOverlay}>
           <Pressable style={styles.modalBackdrop} onPress={closeLessonModal} />
           <View style={[styles.modalCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-            <Text style={[styles.modalTag, { color: colors.primary }]}>Licao selecionada</Text>
+            <Text style={[styles.modalTag, { color: colors.primary }]}>Lição selecionada</Text>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
               {selectedLesson ? `${selectedLesson.position}. ${selectedLesson.title}` : ""}
             </Text>
@@ -361,10 +361,10 @@ export default function TrailDetailScreen() {
               <View style={[styles.modalMetaChip, { backgroundColor: colors.cardMutedBackground, borderColor: colors.border }]}>
                 <Text style={[styles.modalMetaText, { color: colors.textPrimary }]}>
                   {selectedLesson?.is_completed
-                    ? "Concluida"
+                    ? "Concluída"
                     : selectedLesson?.is_locked
                       ? "Bloqueada"
-                      : "Disponivel"}
+                      : "Disponível"}
                 </Text>
               </View>
               <View style={[styles.modalMetaChip, { backgroundColor: colors.cardMutedBackground, borderColor: colors.border }]}>
@@ -403,14 +403,14 @@ export default function TrailDetailScreen() {
                     pressed && styles.buttonPressed,
                   ]}
                 >
-                  <Text style={styles.modalPrimaryButtonText}>Comecar</Text>
+                  <Text style={styles.modalPrimaryButtonText}>Começar</Text>
                 </Pressable>
               )}
             </View>
 
             {selectedLesson?.is_locked ? (
               <Text style={[styles.lockedHint, { color: colors.textSecondary }]}>
-                Complete as licoes anteriores para desbloquear esta etapa.
+                Complete as lições anteriores para desbloquear esta etapa.
               </Text>
             ) : null}
           </View>
@@ -635,3 +635,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+

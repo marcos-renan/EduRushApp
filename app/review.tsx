@@ -27,7 +27,7 @@ export default function ReviewScreen() {
           <Pressable onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <Ionicons name="arrow-back" size={18} color={colors.primary} />
           </Pressable>
-          <Text style={[styles.topTitle, { color: colors.textPrimary }]}>Revisao de Erros</Text>
+          <Text style={[styles.topTitle, { color: colors.textPrimary }]}>Revisão de Erros</Text>
           <View style={styles.topEnergy}>
             <EnergyChip value={profile?.energy ?? 0} />
           </View>
@@ -36,12 +36,12 @@ export default function ReviewScreen() {
         {reviewQuery.isLoading ? (
           <View style={styles.centered}>
             <ActivityIndicator size="large" color={palette.blue700} />
-            <Text style={styles.centeredText}>Carregando fila de revisao...</Text>
+            <Text style={styles.centeredText}>Carregando fila de revisão...</Text>
           </View>
         ) : null}
 
         {reviewQuery.isError ? (
-          <Text style={styles.errorText}>Nao foi possivel carregar a revisao agora.</Text>
+          <Text style={styles.errorText}>Não foi possível carregar a revisão agora.</Text>
         ) : null}
 
         {reviewQuery.data ? (
@@ -62,9 +62,9 @@ export default function ReviewScreen() {
                 {reviewQuery.data.data.pending_errors.map((error, index) => (
                   <View key={`${error.question_external_id ?? index}`} style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                     <Text style={[styles.subjectText, { color: colors.textMuted }]}>
-                      {(error.lesson.subject_name ?? "Materia") + " | " + (error.lesson.title ?? "Licao")}
+                      {(error.lesson.subject_name ?? "Matéria") + " | " + (error.lesson.title ?? "Lição")}
                     </Text>
-                    <Text style={[styles.promptText, { color: colors.textPrimary }]}>{error.question_prompt ?? "Questao sem descricao"}</Text>
+                    <Text style={[styles.promptText, { color: colors.textPrimary }]}>{error.question_prompt ?? "Questão sem descricao"}</Text>
                     <Text style={[styles.attemptText, { color: colors.textSecondary }]}>Tentativas com erro: {error.attempts}</Text>
                     <Pressable
                       disabled={!error.lesson.slug}
@@ -232,3 +232,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+

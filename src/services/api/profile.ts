@@ -1,5 +1,5 @@
 import type { ProfileResponse, UpdateProfilePayload } from "../../types/api";
-import { api, withAuth } from "./client";
+import { API_BASE_URL, api, withAuth } from "./client";
 
 export async function getProfile(token: string): Promise<ProfileResponse> {
   const { data } = await api.get<ProfileResponse>("/student/profile", withAuth(token));
@@ -18,8 +18,7 @@ type UploadPhotoInput = {
 };
 
 export async function updateProfilePhoto(token: string, input: UploadPhotoInput): Promise<ProfileResponse> {
-  const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
-  const uploadUrl = `${baseUrl}/student/profile/photo`;
+  const uploadUrl = `${API_BASE_URL}/student/profile/photo`;
 
   const formData = new FormData();
 

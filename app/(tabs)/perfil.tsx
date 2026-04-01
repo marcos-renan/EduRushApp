@@ -471,8 +471,8 @@ export default function PerfilScreen() {
 
     const isDowngrade = nextGradeYear < gradeYear;
     const message = isDowngrade
-      ? "A partir daqui as missoes podem ficar mais faceis."
-      : "A partir daqui as missoes podem ficar mais dificeis.";
+      ? "A partir daqui as missões podem ficar mais fáceis."
+      : "A partir daqui as missões podem ficar mais difíceis.";
 
     openDialog({
       title: "Quer continuar?",
@@ -499,7 +499,7 @@ export default function PerfilScreen() {
   const handleSave = () => {
     if (!name.trim()) {
       openDialog({
-        title: "Nome obrigatorio",
+        title: "Nome obrigatório",
         message: "Informe seu nome.",
         variant: "warning",
       });
@@ -508,7 +508,7 @@ export default function PerfilScreen() {
 
     if (!email.trim()) {
       openDialog({
-        title: "E-mail obrigatorio",
+        title: "E-mail obrigatório",
         message: "Informe seu e-mail.",
         variant: "warning",
       });
@@ -517,8 +517,8 @@ export default function PerfilScreen() {
 
     if (username.trim().length < 3) {
       openDialog({
-        title: "@Usuario invalido",
-        message: "Informe um @usuario com pelo menos 3 caracteres.",
+        title: "@Usuário inválido",
+        message: "Informe um @usuário com pelo menos 3 caracteres.",
         variant: "warning",
       });
       return;
@@ -527,7 +527,7 @@ export default function PerfilScreen() {
     if (password.trim() && password !== passwordConfirmation) {
       openDialog({
         title: "Senhas diferentes",
-        message: "A confirmacao de senha deve ser igual.",
+        message: "A confirmação de senha deve ser igual.",
         variant: "warning",
       });
       return;
@@ -628,7 +628,7 @@ export default function PerfilScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>@Usuario</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>@Usuário</Text>
             <TextInput
               value={username}
               onChangeText={setUsername}
@@ -654,7 +654,7 @@ export default function PerfilScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Serie</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Série</Text>
             <View style={styles.gradeRow}>
               {gradeOptions.map((option) => (
                 <Pressable
@@ -751,7 +751,7 @@ export default function PerfilScreen() {
           {saveMutation.isPending ? (
             <ActivityIndicator color={palette.white} />
           ) : (
-            <Text style={styles.primaryButtonText}>Salvar alteracoes</Text>
+            <Text style={styles.primaryButtonText}>Salvar alterações</Text>
           )}
         </Pressable>
 
@@ -1204,3 +1204,4 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
 });
+

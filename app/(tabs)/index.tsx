@@ -50,7 +50,7 @@ function missionAction(
 ): MissionAction {
   if (mission.is_completed) {
     return {
-      label: "Concluida",
+      label: "Concluída",
       disabled: true,
       onPress: () => undefined,
     };
@@ -66,7 +66,7 @@ function missionAction(
 
   if (!nextStudyTarget || !nextStudyTarget.lessonSlug) {
     return {
-      label: "Sem licoes ativas",
+      label: "Sem lições ativas",
       disabled: true,
       onPress: () => undefined,
     };
@@ -92,10 +92,10 @@ function DashboardMissionCard({
     <View style={[styles.missionCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
       <View style={styles.missionHeader}>
         <Text style={[styles.missionType, { color: colors.primary }]}>
-          {mission.mission_type === "daily" ? "Diaria" : "Semanal"}
+          {mission.mission_type === "daily" ? "Diária" : "Semanal"}
         </Text>
         <Text style={[styles.missionStatus, mission.is_completed && styles.missionStatusDone]}>
-          {mission.is_completed ? "Concluida" : "Em andamento"}
+          {mission.is_completed ? "Concluída" : "Em andamento"}
         </Text>
       </View>
       <Text style={[styles.missionTitle, { color: colors.textPrimary }]}>{mission.title}</Text>
@@ -217,7 +217,7 @@ export default function DashboardScreen() {
           <View style={styles.statsRow}>
             <View style={[styles.statBox, { backgroundColor: colors.cardMutedBackground }]}>
               <Text style={[styles.statValue, { color: colors.primary }]}>Nv. {profile?.level ?? 1}</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Nivel</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Nível</Text>
             </View>
             <View style={[styles.statBox, { backgroundColor: colors.cardMutedBackground }]}>
               <Text style={[styles.statValue, { color: colors.primary }]}>{profile?.total_xp ?? 0}</Text>
@@ -225,7 +225,7 @@ export default function DashboardScreen() {
             </View>
             <View style={[styles.statBox, { backgroundColor: colors.cardMutedBackground }]}>
               <Text style={[styles.statValue, { color: colors.primary }]}>{profile?.current_streak ?? 0}</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Sequencia</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Sequência</Text>
             </View>
           </View>
 
@@ -244,8 +244,8 @@ export default function DashboardScreen() {
         </View>
 
         <View style={[styles.chartCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-          <Text style={[styles.chartTitle, { color: colors.textPrimary }]}>Licoes por dia</Text>
-          <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>Seu ritmo de estudos na ultima semana.</Text>
+          <Text style={[styles.chartTitle, { color: colors.textPrimary }]}>Lições por dia</Text>
+          <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>Seu ritmo de estudos na última semana.</Text>
           {rankingQuery.isLoading ? (
             <View style={styles.centered}>
               <ActivityIndicator size="small" color={colors.primary} />
@@ -258,24 +258,24 @@ export default function DashboardScreen() {
         <View style={styles.quickGrid}>
           <Pressable style={[styles.quickCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]} onPress={() => router.push("/(tabs)/missoes")}>
             <Text style={[styles.quickNumber, { color: colors.primary }]}>{completedMissionsCount}</Text>
-            <Text style={[styles.quickTitle, { color: colors.textSecondary }]}>Missoes concluidas</Text>
+            <Text style={[styles.quickTitle, { color: colors.textSecondary }]}>Missões concluídas</Text>
           </Pressable>
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.primary }]}>Suas missoes</Text>
+          <Text style={[styles.sectionTitle, { color: colors.primary }]}>Suas missões</Text>
 
           {missionsQuery.isLoading ? (
             <View style={styles.centered}>
               <ActivityIndicator size="large" color={palette.blue700} />
-              <Text style={[styles.centeredText, { color: colors.textSecondary }]}>Carregando missoes...</Text>
+              <Text style={[styles.centeredText, { color: colors.textSecondary }]}>Carregando missões...</Text>
             </View>
           ) : null}
 
-          {missionsQuery.isError ? <Text style={styles.errorText}>Nao foi possivel carregar missoes.</Text> : null}
+          {missionsQuery.isError ? <Text style={styles.errorText}>Não foi possível carregar missões.</Text> : null}
 
           {!missionsQuery.isLoading && missions.length === 0 ? (
-            <Text style={[styles.centeredText, { color: colors.textSecondary }]}>Nenhuma missao disponivel no momento.</Text>
+            <Text style={[styles.centeredText, { color: colors.textSecondary }]}>Nenhuma missão disponível no momento.</Text>
           ) : null}
 
           {missions.map((mission) => (
@@ -520,3 +520,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+

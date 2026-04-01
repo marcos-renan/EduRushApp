@@ -79,7 +79,7 @@ export default function FriendsScreen() {
     setDialogState({
       visible: true,
       title: "Tem certeza disso?",
-      message: `Voce vai remover ${friend.user.name} da sua lista de amigos.`,
+      message: `Você vai remover ${friend.user.name} da sua lista de amigos.`,
       variant: "warning",
       actions: [
         {
@@ -138,7 +138,7 @@ export default function FriendsScreen() {
       showDialog("Pedido enviado", "Convite de amizade enviado com sucesso.", "success");
     },
     onError: (error) => {
-      showDialog("Nao foi possivel enviar", extractApiError(error), "error");
+      showDialog("Não foi possível enviar", extractApiError(error), "error");
     },
   });
 
@@ -146,7 +146,7 @@ export default function FriendsScreen() {
     mutationFn: (requestExternalId: string) => acceptFriendRequest(token!, requestExternalId),
     onSuccess: async () => {
       await refreshAll();
-      showDialog("Pedido aceito", "Agora voces estao conectados.", "success");
+      showDialog("Pedido aceito", "Agora vocês estão conectados.", "success");
     },
     onError: (error) => showDialog("Falha ao aceitar", extractApiError(error), "error"),
   });
@@ -164,7 +164,7 @@ export default function FriendsScreen() {
     mutationFn: (friendExternalId: string) => removeFriend(token!, friendExternalId),
     onSuccess: async () => {
       await refreshAll();
-      showDialog("Amigo removido", "A conexao foi removida da sua lista.", "info");
+      showDialog("Amigo removido", "A conexão foi removida da sua lista.", "info");
     },
     onError: (error) => showDialog("Falha ao remover", extractApiError(error), "error"),
   });
@@ -229,7 +229,7 @@ export default function FriendsScreen() {
           ) : null}
 
           {searchTerm.length >= 2 && !searchQuery.isFetching && searchResults.length === 0 ? (
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Nenhum usuario encontrado.</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Nenhum usuário encontrado.</Text>
           ) : null}
 
           {searchResults.map((member) => {
@@ -373,7 +373,7 @@ export default function FriendsScreen() {
           <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Seus amigos (A-Z)</Text>
 
           {friends.length === 0 ? (
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Voce ainda nao adicionou amigos.</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Você ainda não adicionou amigos.</Text>
           ) : null}
 
           {friends.map((friend) => (
@@ -609,3 +609,4 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
 });
+

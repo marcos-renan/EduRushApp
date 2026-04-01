@@ -25,7 +25,7 @@ import { useAppTheme } from "../../src/theme/app-theme";
 import { palette } from "../../src/theme/palette";
 
 const schema = z.object({
-  email: z.string().email("Digite um e-mail valido."),
+  email: z.string().email("Digite um e-mail válido."),
   password: z.string().min(6, "A senha precisa ter pelo menos 6 caracteres."),
 });
 
@@ -78,13 +78,13 @@ export default function LoginScreen() {
               style={styles.logoImage}
               resizeMode="contain"
             />
-            <Text style={styles.subtitle}>Seu app gamificado para o ensino medio.</Text>
+            <Text style={styles.subtitle}>Seu app gamificado para o ensino médio.</Text>
           </View>
 
           <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
             <Text style={[styles.title, { color: colors.textPrimary }]}>Entrar na conta</Text>
             <Text style={[styles.description, { color: colors.textSecondary }]}>
-              Use seu login de aluno para acessar materias, trilhas, missoes e questoes.
+              Use seu login de aluno para acessar matérias, trilhas, missões e questões.
             </Text>
 
             <View style={styles.field}>
@@ -298,3 +298,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+

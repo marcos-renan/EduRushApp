@@ -58,7 +58,7 @@ function groupTrailsBySubject(trails: TrailItem[]): SubjectGroup[] {
   return result.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export default function MateriasScreen() {
+export default function MatériasScreen() {
   const token = useAuthStore((state) => state.token);
   const profile = useAuthStore((state) => state.profile);
   const { colors } = useAppTheme();
@@ -76,15 +76,15 @@ export default function MateriasScreen() {
 
     return (
       <Pressable style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]} onPress={() => router.push(`/subject/${item.slug}`)}>
-        <Text style={[styles.subject, { color: colors.primary }]}>Materia</Text>
+        <Text style={[styles.subject, { color: colors.primary }]}>Matéria</Text>
         <Text style={[styles.title, { color: colors.textPrimary }]}>{item.name}</Text>
         <Text style={[styles.description, { color: colors.textSecondary }]}>
-          {item.trails_count} trilha(s) disponivel(is) para voce estudar.
+          {item.trails_count} trilha(s) disponível(is) para você estudar.
         </Text>
 
         <View style={styles.progressRow}>
           <Text style={[styles.progressText, { color: colors.textSecondary }]}>
-            {item.completed_lessons_count}/{item.lessons_count} licoes concluidas
+            {item.completed_lessons_count}/{item.lessons_count} lições concluídas
           </Text>
           <Text style={[styles.progressText, { color: colors.textSecondary }]}>{percent}%</Text>
         </View>
@@ -99,21 +99,21 @@ export default function MateriasScreen() {
     <GradientScreen>
       <View style={styles.wrapper}>
         <View style={styles.topRow}>
-          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Materias</Text>
+          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Matérias</Text>
           <EnergyChip value={profile?.energy ?? 0} />
         </View>
-        <Text style={[styles.screenSubtitle, { color: colors.textSecondary }]}>Escolha uma materia para ver as trilhas e iniciar as licoes.</Text>
+        <Text style={[styles.screenSubtitle, { color: colors.textSecondary }]}>Escolha uma matéria para ver as trilhas e iniciar as lições.</Text>
 
         {trailsQuery.isLoading ? (
           <View style={styles.centered}>
             <ActivityIndicator size="large" color={palette.blue700} />
-            <Text style={styles.centeredText}>Carregando materias...</Text>
+            <Text style={styles.centeredText}>Carregando matérias...</Text>
           </View>
         ) : null}
 
         {trailsQuery.isError ? (
           <View style={styles.centered}>
-            <Text style={styles.errorText}>Nao foi possivel carregar as materias.</Text>
+            <Text style={styles.errorText}>Não foi possível carregar as matérias.</Text>
           </View>
         ) : null}
 
@@ -126,7 +126,7 @@ export default function MateriasScreen() {
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.centered}>
-                <Text style={styles.centeredText}>Nenhuma materia disponivel no momento.</Text>
+                <Text style={styles.centeredText}>Nenhuma matéria disponível no momento.</Text>
               </View>
             }
           />
@@ -230,3 +230,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+

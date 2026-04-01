@@ -70,7 +70,7 @@ export default function RankingScreen() {
           <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Ranking</Text>
           <EnergyChip value={profile?.energy ?? 0} />
         </View>
-        <Text style={[styles.screenSubtitle, { color: colors.textSecondary }]}>Toque no perfil para ver detalhes de sequencia, nivel e badges.</Text>
+        <Text style={[styles.screenSubtitle, { color: colors.textSecondary }]}>Toque no perfil para ver detalhes de sequência, nível e badges.</Text>
 
         <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
           <Text style={[styles.summaryTitle, { color: colors.textPrimary }]}>Sua colocacao</Text>
@@ -89,7 +89,7 @@ export default function RankingScreen() {
           </View>
         ) : null}
 
-        {rankingQuery.isError ? <Text style={styles.errorText}>Nao foi possivel carregar o ranking.</Text> : null}
+        {rankingQuery.isError ? <Text style={styles.errorText}>Não foi possível carregar o ranking.</Text> : null}
 
         {!rankingQuery.isLoading && ranking.length === 0 ? (
           <View style={styles.centered}>
@@ -114,7 +114,7 @@ export default function RankingScreen() {
               <RankingAvatar member={member} />
               <View>
                 <Text style={[styles.memberName, { color: colors.textPrimary }]}>
-                  {member.user.name} {member.is_me ? "(voce)" : ""}
+                  {member.user.name} {member.is_me ? "(você)" : ""}
                 </Text>
                 <Text style={[styles.memberHandle, { color: colors.textSecondary }]}>
                   {member.user.handle} | Nv. {member.stats.level}
@@ -153,17 +153,17 @@ export default function RankingScreen() {
 
               <View style={styles.modalStatsRow}>
                 <View style={[styles.modalStatBox, { backgroundColor: colors.cardMutedBackground }]}>
-                  <Text style={[styles.modalStatLabel, { color: colors.textSecondary }]}>Nivel</Text>
+                  <Text style={[styles.modalStatLabel, { color: colors.textSecondary }]}>Nível</Text>
                   <Text style={[styles.modalStatValue, { color: colors.primary }]}>{selectedMember.stats.level}</Text>
                 </View>
                 <View style={[styles.modalStatBox, { backgroundColor: colors.cardMutedBackground }]}>
-                  <Text style={[styles.modalStatLabel, { color: colors.textSecondary }]}>Sequencia</Text>
+                  <Text style={[styles.modalStatLabel, { color: colors.textSecondary }]}>Sequência</Text>
                   <Text style={[styles.modalStatValue, { color: colors.primary }]}>{selectedMember.stats.current_streak}</Text>
                 </View>
               </View>
 
               <View style={styles.graphSection}>
-                <Text style={[styles.graphTitle, { color: colors.textPrimary }]}>Grafico de sequencia</Text>
+                <Text style={[styles.graphTitle, { color: colors.textPrimary }]}>Gráfico de sequência</Text>
                 <View style={styles.graphRow}>
                   {streakPoints.map((active, index) => (
                     <View key={`streak-point-${index}`} style={styles.graphNodeWrap}>
@@ -197,7 +197,7 @@ export default function RankingScreen() {
               </View>
 
               <View style={styles.lessonsChartSection}>
-                <Text style={[styles.graphTitle, { color: colors.textPrimary }]}>Licoes por dia</Text>
+                <Text style={[styles.graphTitle, { color: colors.textPrimary }]}>Lições por dia</Text>
                 <LessonsLineChart data={selectedMember.stats.lessons_per_day} height={148} />
               </View>
 
@@ -465,3 +465,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+

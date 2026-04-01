@@ -29,10 +29,10 @@ const schema = z
     name: z.string().min(3, "Informe seu nome completo."),
     username: z
       .string()
-      .min(3, "Informe um @usuario com pelo menos 3 caracteres.")
-      .max(40, "Seu @usuario pode ter no maximo 40 caracteres.")
-      .regex(/^@?[a-zA-Z0-9._]+$/, "Use apenas letras, numeros, ponto e underscore."),
-    email: z.string().email("Digite um e-mail valido."),
+      .min(3, "Informe um @usuário com pelo menos 3 caracteres.")
+      .max(40, "Seu @usuário pode ter no máximo 40 caracteres.")
+      .regex(/^@?[a-zA-Z0-9._]+$/, "Use apenas letras, números, ponto e underscore."),
+    email: z.string().email("Digite um e-mail válido."),
     grade_year: z.number().int().min(1).max(3),
     password: z.string().min(6, "A senha precisa ter pelo menos 6 caracteres."),
     password_confirmation: z.string().min(6, "Confirme a senha."),
@@ -132,7 +132,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.textPrimary }]}>@Usuario</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>@Usuário</Text>
               <Controller
                 control={control}
                 name="username"
@@ -174,7 +174,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.textPrimary }]}>Serie</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>Série</Text>
               <View style={styles.gradeRow}>
                 {gradeOptions.map((option) => (
                   <Pressable
@@ -289,7 +289,7 @@ export default function RegisterScreen() {
             </Pressable>
 
             <Pressable onPress={() => router.replace("/(auth)/login")} style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>Ja tenho conta</Text>
+              <Text style={styles.secondaryButtonText}>Já tenho conta</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -439,3 +439,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+

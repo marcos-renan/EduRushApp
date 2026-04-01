@@ -110,7 +110,7 @@ export default function LessonQuestionsScreen() {
     if (nextLessonInTrail?.slug) {
       return {
         kind: "lesson" as const,
-        label: "Proxima licao",
+        label: "Próxima lição",
         slug: nextLessonInTrail.slug,
       };
     }
@@ -289,7 +289,7 @@ export default function LessonQuestionsScreen() {
             <Pressable onPress={handleTryLeaveLesson} style={[styles.backButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
               <Ionicons name="arrow-back" size={18} color={colors.primary} />
             </Pressable>
-            <Text style={[styles.topTitle, { color: colors.textPrimary }]}>Licao</Text>
+            <Text style={[styles.topTitle, { color: colors.textPrimary }]}>Lição</Text>
             <View style={styles.topEnergy}>
               <EnergyChip value={profile?.energy ?? 0} />
             </View>
@@ -335,13 +335,13 @@ export default function LessonQuestionsScreen() {
                     </Text>
                     <Text style={[styles.resultHighlight, styles.resultTextCentered]}>
                       {result.progress.already_completed
-                        ? "Esta lição já tinha sido concluida antes."
+                        ? "Esta lição já tinha sido concluída antes."
                         : `+${result.progress.earned_xp} XP ganhos.`}
                     </Text>
 
                     {result.completed_missions.length > 0 ? (
                       <View style={[styles.highlightBlock, { borderColor: colors.border, backgroundColor: colors.cardMutedBackground }]}>
-                        <Text style={styles.highlightTitle}>Missoes concluidas</Text>
+                        <Text style={styles.highlightTitle}>Missões concluídas</Text>
                         {result.completed_missions.map((mission, index) => (
                           <Text key={`${mission.title}-${index}`} style={styles.highlightItem}>
                             {mission.title} (+{mission.reward_xp} XP)
@@ -391,7 +391,7 @@ export default function LessonQuestionsScreen() {
 
                     <View style={styles.actionsRow}>
                       <Pressable onPress={resetAttempt} style={styles.secondaryButton}>
-                        <Text style={styles.secondaryButtonText}>Tentar denovo</Text>
+                        <Text style={styles.secondaryButtonText}>Tentar de novo</Text>
                       </Pressable>
                       <Pressable onPress={() => router.back()} style={styles.primaryButton}>
                         <Text style={styles.primaryButtonText}>Voltar</Text>
@@ -420,7 +420,7 @@ export default function LessonQuestionsScreen() {
               ) : (
                 <View style={[styles.questionCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                   <Text style={styles.questionCounter}>
-                    Questao {currentIndex + 1} de {questions.length}
+                    Questão {currentIndex + 1} de {questions.length}
                   </Text>
                   <Text style={[styles.questionPrompt, { color: colors.textPrimary }]}>{currentQuestion.prompt}</Text>
 
@@ -948,3 +948,4 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
 });
+

@@ -47,14 +47,14 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Inicio",
+          title: "Início",
           tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="trilhas"
         options={{
-          title: "Materias",
+          title: "Matérias",
           tabBarIcon: ({ color, size }) => <Ionicons name="book" color={color} size={size} />,
         }}
       />
@@ -106,3 +106,4 @@ const styles = StyleSheet.create({
     borderColor: palette.blue200,
   },
 });
+
