@@ -279,62 +279,57 @@ export default function TrailDetailScreen() {
               <Text style={[styles.description, { color: colors.textSecondary }]}>{trailQuery.data.data.description}</Text>
             </View>
 
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.primary }]}>Estrada de licoes</Text>
-              <View
-                onLayout={handleRoadmapLayout}
-                style={[
-                  styles.roadmapContainer,
-                  {
-                    height: roadmapHeight,
-                    backgroundColor: colors.cardBackground,
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                {positions.slice(0, -1).map((point, index) => {
-                  const next = positions[index + 1];
-                  const dx = next.x - point.x;
-                  const dy = next.y - point.y;
-                  const length = Math.hypot(dx, dy);
-                  const angle = Math.atan2(dy, dx);
+            <View
+              onLayout={handleRoadmapLayout}
+              style={[
+                styles.roadmapContainer,
+                {
+                  height: roadmapHeight,
+                },
+              ]}
+            >
+              {positions.slice(0, -1).map((point, index) => {
+                const next = positions[index + 1];
+                const dx = next.x - point.x;
+                const dy = next.y - point.y;
+                const length = Math.hypot(dx, dy);
+                const angle = Math.atan2(dy, dx);
 
-                  return (
-                    <View
-                      key={`seg-${index}`}
-                      style={[
-                        styles.roadSegment,
-                        {
-                          left: point.x,
-                          top: point.y,
-                          width: length,
-                          backgroundColor: colors.cardMutedBackground,
-                          transform: [{ translateY: -ROAD_STROKE / 2 }, { rotateZ: `${angle}rad` }],
-                        },
-                      ]}
-                    />
-                  );
-                })}
+                return (
+                  <View
+                    key={`seg-${index}`}
+                    style={[
+                      styles.roadSegment,
+                      {
+                        left: point.x,
+                        top: point.y,
+                        width: length,
+                        backgroundColor: colors.cardMutedBackground,
+                        transform: [{ translateY: -ROAD_STROKE / 2 }, { rotateZ: `${angle}rad` }],
+                      },
+                    ]}
+                  />
+                );
+              })}
 
-                {lessons.map((lesson, index) => {
-                  const point = positions[index];
-                  if (!point) return null;
+              {lessons.map((lesson, index) => {
+                const point = positions[index];
+                if (!point) return null;
 
-                  return (
-                    <LessonNodeButton
-                      key={`${lesson.external_id ?? lesson.slug ?? `lesson-${lesson.position}`}`}
-                      lesson={lesson}
-                      x={point.x}
-                      y={point.y}
-                      isFocus={lesson.slug === focusLessonSlug}
-                      isDark={isDark}
-                      primaryColor={colors.primary}
-                      borderColor={colors.border}
-                      onPress={() => setSelectedLesson(lesson)}
-                    />
-                  );
-                })}
-              </View>
+                return (
+                  <LessonNodeButton
+                    key={`${lesson.external_id ?? lesson.slug ?? `lesson-${lesson.position}`}`}
+                    lesson={lesson}
+                    x={point.x}
+                    y={point.y}
+                    isFocus={lesson.slug === focusLessonSlug}
+                    isDark={isDark}
+                    primaryColor={colors.primary}
+                    borderColor={colors.border}
+                    onPress={() => setSelectedLesson(lesson)}
+                  />
+                );
+              })}
             </View>
           </>
         ) : null}
@@ -466,19 +461,9 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: "500",
   },
-  section: {
-    gap: 10,
-  },
-  sectionTitle: {
-    color: palette.blue800,
-    fontSize: 16,
-    fontWeight: "900",
-  },
   roadmapContainer: {
-    borderRadius: 22,
-    borderWidth: 1,
-    overflow: "hidden",
     position: "relative",
+    overflow: "visible",
   },
   roadSegment: {
     position: "absolute",
