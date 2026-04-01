@@ -285,11 +285,36 @@ export default function PerfilScreen() {
         password_confirmation: password.trim() ? passwordConfirmation : undefined,
       }),
     onSuccess: async (response) => {
+      const previousGradeYear = profile?.grade_year ?? null;
+      const nextGradeYear = response.data.student_profile?.grade_year ?? null;
+      const hasGradeChanged =
+        previousGradeYear !== null &&
+        nextGradeYear !== null &&
+        previousGradeYear !== nextGradeYear;
+
       await updateUser(response.data.user);
       if (response.data.student_profile) {
         await updateProfileStore(response.data.student_profile);
       }
       queryClient.setQueryData(["profile", token], response);
+
+      if (hasGradeChanged) {
+        queryClient.removeQueries({ queryKey: ["trails"] });
+        queryClient.removeQueries({ queryKey: ["subject-trails"] });
+        queryClient.removeQueries({ queryKey: ["trail-detail"] });
+        queryClient.removeQueries({ queryKey: ["lesson-questions"] });
+        queryClient.removeQueries({ queryKey: ["missions"] });
+        queryClient.removeQueries({ queryKey: ["review-errors"] });
+        queryClient.removeQueries({ queryKey: ["profile", token, "energy-sync"] });
+
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["trails"] }),
+          queryClient.invalidateQueries({ queryKey: ["missions"] }),
+          queryClient.invalidateQueries({ queryKey: ["review-errors"] }),
+          queryClient.invalidateQueries({ queryKey: ["profile", token, "energy-sync"] }),
+        ]);
+      }
+
       setPassword("");
       setPasswordConfirmation("");
       openDialog({
