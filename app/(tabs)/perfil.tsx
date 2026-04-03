@@ -22,11 +22,13 @@ import { GradientScreen } from "../../src/components/GradientScreen";
 import { StyledDialog, type StyledDialogAction, type StyledDialogVariant } from "../../src/components/StyledDialog";
 import { logoutRequest } from "../../src/services/api/auth";
 import { extractApiError, resolveApiAssetUrl } from "../../src/services/api/client";
+import { getFriendsRanking } from "../../src/services/api/friends";
 import { getProfile, updateProfile, updateProfilePhoto } from "../../src/services/api/profile";
 import { useAuthStore } from "../../src/store/auth-store";
 import { useThemeStore } from "../../src/store/theme-store";
 import { useAppTheme } from "../../src/theme/app-theme";
 import { palette } from "../../src/theme/palette";
+import type { FriendMember } from "../../src/types/api";
 
 const gradeOptions = [
   { label: "1o ano", value: 1 },
@@ -90,6 +92,24 @@ function computeCropMetrics(image: PendingImage | null, zoom: number) {
   };
 }
 
+function ProfileBadgeAvatar({ badge }: { badge: FriendMember["stats"]["badges"][number] }) {
+  const { colors } = useAppTheme();
+  const [failed, setFailed] = useState(false);
+  const imageUrl = resolveApiAssetUrl(badge.image_url ?? null);
+
+  if (imageUrl && !failed) {
+    return <Image source={{ uri: imageUrl }} style={styles.badgeAvatarImage} onError={() => setFailed(true)} />;
+  }
+
+  return (
+    <View style={[styles.badgeAvatarFallback, { backgroundColor: colors.primarySoft, borderColor: colors.border }]}>
+      <Text style={[styles.badgeAvatarFallbackText, { color: colors.primary }]}>
+        {(badge.name?.charAt(0) || "B").toUpperCase()}
+      </Text>
+    </View>
+  );
+}
+
 export default function PerfilScreen() {
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
@@ -109,6 +129,7 @@ export default function PerfilScreen() {
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
+  const [selectedBadge, setSelectedBadge] = useState<FriendMember["stats"]["badges"][number] | null>(null);
   const [avatarVersion, setAvatarVersion] = useState<number>(Date.now());
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
   const [cropZoom, setCropZoom] = useState<number>(1);
@@ -160,6 +181,12 @@ export default function PerfilScreen() {
     enabled: !!token,
   });
 
+  const rankingQuery = useQuery({
+    queryKey: ["friends-ranking", token],
+    queryFn: () => getFriendsRanking(token!),
+    enabled: !!token,
+  });
+
   useEffect(() => {
     if (!profileQuery.data) return;
 
@@ -185,6 +212,10 @@ export default function PerfilScreen() {
   const savedUsername = useMemo(
     () => (user?.username?.trim() || profileQuery.data?.data.user.username?.trim() || "usuario").replace(/^@/, ""),
     [profileQuery.data, user?.username]
+  );
+  const myBadges = useMemo(
+    () => rankingQuery.data?.data.find((member) => member.is_me)?.stats.badges ?? [],
+    [rankingQuery.data]
   );
 
   const cropMetrics = useMemo(() => computeCropMetrics(pendingImage, cropZoom), [pendingImage, cropZoom]);
@@ -734,6 +765,33 @@ export default function PerfilScreen() {
           </View>
         </View>
 
+        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Badges desbloqueadas</Text>
+          {rankingQuery.isLoading ? (
+            <View style={styles.badgesLoading}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={[styles.badgesLoadingText, { color: colors.textSecondary }]}>Carregando badges...</Text>
+            </View>
+          ) : myBadges.length > 0 ? (
+            <View style={styles.badgesWrap}>
+              {myBadges.map((badge, index) => (
+                <Pressable
+                  key={`${badge.id ?? badge.name}-${index}`}
+                  onPress={() => setSelectedBadge(badge)}
+                  style={[styles.badgeChip, { borderColor: colors.border, backgroundColor: colors.cardMutedBackground }]}
+                >
+                  <ProfileBadgeAvatar badge={badge} />
+                  <Text style={[styles.badgeChipText, { color: colors.textPrimary }]} numberOfLines={1}>
+                    {badge.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : (
+            <Text style={[styles.badgesEmptyText, { color: colors.textSecondary }]}>Você ainda não desbloqueou badges.</Text>
+          )}
+        </View>
+
         {(saveMutation.isError || profileQuery.isError) && (
           <Text style={styles.errorText}>{extractApiError(saveMutation.error || profileQuery.error)}</Text>
         )}
@@ -767,6 +825,30 @@ export default function PerfilScreen() {
           <Text style={styles.logoutText}>Sair da conta</Text>
         </Pressable>
       </ScrollView>
+      <Modal visible={!!selectedBadge} transparent animationType="fade" onRequestClose={() => setSelectedBadge(null)}>
+        <View style={styles.badgeDetailsOverlay}>
+          <Pressable style={styles.badgeDetailsBackdrop} onPress={() => setSelectedBadge(null)} />
+          {selectedBadge ? (
+            <View style={[styles.badgeDetailsCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View style={styles.badgeDetailsHeader}>
+                <Text style={[styles.badgeDetailsTitle, { color: colors.textPrimary }]}>Badge</Text>
+                <Pressable onPress={() => setSelectedBadge(null)} style={styles.closeButton}>
+                  <Text style={[styles.closeText, { color: colors.textSecondary }]}>Fechar</Text>
+                </Pressable>
+              </View>
+              <View style={styles.badgeDetailsBody}>
+                <View style={styles.badgeDetailsAvatarWrap}>
+                  <ProfileBadgeAvatar badge={selectedBadge} />
+                </View>
+                <Text style={[styles.badgeDetailsName, { color: colors.textPrimary }]}>{selectedBadge.name}</Text>
+                <Text style={[styles.badgeDetailsDescription, { color: colors.textSecondary }]}>
+                  {selectedBadge.description?.trim() || "Sem descrição para esta badge."}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+        </View>
+      </Modal>
       <StyledDialog
         visible={dialogState.visible}
         title={dialogState.title}
@@ -1095,6 +1177,109 @@ const styles = StyleSheet.create({
     color: palette.danger,
     fontSize: 14,
     fontWeight: "800",
+  },
+  badgesLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  badgesLoadingText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  badgesWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  badgeChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    maxWidth: "100%",
+  },
+  badgeChipText: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  badgeAvatarImage: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: palette.blue200,
+    backgroundColor: palette.white,
+  },
+  badgeAvatarFallback: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeAvatarFallbackText: {
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  badgesEmptyText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  badgeDetailsOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  badgeDetailsBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(3, 9, 20, 0.62)",
+  },
+  badgeDetailsCard: {
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 18,
+    gap: 14,
+  },
+  badgeDetailsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  badgeDetailsTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  closeButton: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  closeText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  badgeDetailsBody: {
+    alignItems: "center",
+    gap: 8,
+  },
+  badgeDetailsAvatarWrap: {
+    transform: [{ scale: 3.2 }],
+    marginVertical: 22,
+  },
+  badgeDetailsName: {
+    fontSize: 19,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  badgeDetailsDescription: {
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 22,
   },
   cropModalOverlay: {
     flex: 1,

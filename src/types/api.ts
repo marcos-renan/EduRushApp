@@ -200,9 +200,12 @@ export type LessonAttemptResponse = {
       mission_type: string;
     }>;
     unlocked_badges: Array<{
+      id?: number;
       name: string;
+      description?: string;
       icon?: string;
       color_hex?: string;
+      image_url?: string | null;
     }>;
   };
 };
@@ -241,9 +244,12 @@ export type FriendMember = {
       lessons_completed: number;
     }>;
     badges: Array<{
+      id?: number;
       name: string;
+      description?: string;
       icon?: string;
       color_hex?: string;
+      image_url?: string | null;
     }>;
   };
 };

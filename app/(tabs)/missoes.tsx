@@ -31,6 +31,24 @@ function RankingAvatar({ member }: { member: FriendMember }) {
   );
 }
 
+function BadgeAvatar({ badge }: { badge: FriendMember["stats"]["badges"][number] }) {
+  const { colors } = useAppTheme();
+  const [failed, setFailed] = useState(false);
+  const imageUrl = resolveApiAssetUrl(badge.image_url ?? null);
+
+  if (imageUrl && !failed) {
+    return <Image source={{ uri: imageUrl }} style={styles.badgeAvatarImage} onError={() => setFailed(true)} />;
+  }
+
+  return (
+    <View style={[styles.badgeAvatarFallback, { backgroundColor: colors.primarySoft, borderColor: colors.border }]}>
+      <Text style={[styles.badgeAvatarFallbackText, { color: colors.primary }]}>
+        {(badge.name?.charAt(0) || "B").toUpperCase()}
+      </Text>
+    </View>
+  );
+}
+
 function buildStreakGraphPoints(streak: number, points = 7): boolean[] {
   const activeCount = Math.max(0, Math.min(streak, points));
   const threshold = points - activeCount;
@@ -51,6 +69,7 @@ export default function RankingScreen() {
   const profile = useAuthStore((state) => state.profile);
   const { colors } = useAppTheme();
   const [selectedMember, setSelectedMember] = useState<RankedMember | null>(null);
+  const [selectedBadge, setSelectedBadge] = useState<RankedMember["stats"]["badges"][number] | null>(null);
 
   const rankingQuery = useQuery({
     queryKey: ["friends-ranking", token],
@@ -130,15 +149,30 @@ export default function RankingScreen() {
         visible={!!selectedMember}
         transparent
         animationType="fade"
-        onRequestClose={() => setSelectedMember(null)}
+        onRequestClose={() => {
+          setSelectedBadge(null);
+          setSelectedMember(null);
+        }}
       >
         <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setSelectedMember(null)} />
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => {
+              setSelectedBadge(null);
+              setSelectedMember(null);
+            }}
+          />
           {selectedMember ? (
             <View style={[styles.modalCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
               <View style={styles.modalHeader}>
                 <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Perfil no ranking</Text>
-                <Pressable onPress={() => setSelectedMember(null)} style={styles.closeButton}>
+                <Pressable
+                  onPress={() => {
+                    setSelectedBadge(null);
+                    setSelectedMember(null);
+                  }}
+                  style={styles.closeButton}
+                >
                   <Text style={[styles.closeText, { color: colors.textSecondary }]}>Fechar</Text>
                 </Pressable>
               </View>
@@ -206,25 +240,57 @@ export default function RankingScreen() {
                 <View style={styles.badgesWrap}>
                   {selectedMember.stats.badges.length > 0 ? (
                     selectedMember.stats.badges.map((badge: RankedMember["stats"]["badges"][number], index: number) => (
-                      <View
+                      <Pressable
                         key={`${badge.name}-${index}`}
+                        onPress={() => setSelectedBadge(badge)}
                         style={[
                           styles.badgeChip,
                           {
-                            borderColor: badge.color_hex || colors.border,
+                            borderColor: colors.border,
                             backgroundColor: colors.cardMutedBackground,
                           },
                         ]}
                       >
-                        <Text style={[styles.badgeChipText, { color: badge.color_hex || colors.textPrimary }]}>
+                        <BadgeAvatar badge={badge} />
+                        <Text style={[styles.badgeChipText, { color: colors.textPrimary }]} numberOfLines={1}>
                           {badge.name}
                         </Text>
-                      </View>
+                      </Pressable>
                     ))
                   ) : (
                     <Text style={[styles.noBadgesText, { color: colors.textSecondary }]}>Sem badges desbloqueadas ainda.</Text>
                   )}
                 </View>
+              </View>
+            </View>
+          ) : null}
+        </View>
+      </Modal>
+
+      <Modal
+        visible={!!selectedBadge}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedBadge(null)}
+      >
+        <View style={styles.badgeDetailsOverlay}>
+          <Pressable style={styles.badgeDetailsBackdrop} onPress={() => setSelectedBadge(null)} />
+          {selectedBadge ? (
+            <View style={[styles.badgeDetailsCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View style={styles.badgeDetailsHeader}>
+                <Text style={[styles.badgeDetailsTitle, { color: colors.textPrimary }]}>Badge</Text>
+                <Pressable onPress={() => setSelectedBadge(null)} style={styles.closeButton}>
+                  <Text style={[styles.closeText, { color: colors.textSecondary }]}>Fechar</Text>
+                </Pressable>
+              </View>
+              <View style={styles.badgeDetailsBody}>
+                <View style={styles.badgeDetailsAvatarWrap}>
+                  <BadgeAvatar badge={selectedBadge} />
+                </View>
+                <Text style={[styles.badgeDetailsName, { color: colors.textPrimary }]}>{selectedBadge.name}</Text>
+                <Text style={[styles.badgeDetailsDescription, { color: colors.textSecondary }]}>
+                  {selectedBadge.description?.trim() || "Sem descrição para esta badge."}
+                </Text>
               </View>
             </View>
           ) : null}
@@ -453,16 +519,83 @@ const styles = StyleSheet.create({
   badgeChip: {
     borderWidth: 1,
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    maxWidth: "100%",
   },
   badgeChipText: {
     fontSize: 11,
     fontWeight: "800",
   },
+  badgeAvatarImage: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: palette.blue200,
+    backgroundColor: palette.white,
+  },
+  badgeAvatarFallback: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeAvatarFallbackText: {
+    fontSize: 10,
+    fontWeight: "900",
+  },
   noBadgesText: {
     fontSize: 12,
     fontWeight: "600",
+  },
+  badgeDetailsOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  badgeDetailsBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(3, 9, 20, 0.62)",
+  },
+  badgeDetailsCard: {
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 18,
+    gap: 14,
+  },
+  badgeDetailsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  badgeDetailsTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  badgeDetailsBody: {
+    alignItems: "center",
+    gap: 8,
+  },
+  badgeDetailsAvatarWrap: {
+    transform: [{ scale: 3.2 }],
+    marginVertical: 22,
+  },
+  badgeDetailsName: {
+    fontSize: 19,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  badgeDetailsDescription: {
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 22,
   },
 });
 
