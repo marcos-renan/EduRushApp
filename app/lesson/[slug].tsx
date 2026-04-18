@@ -79,7 +79,9 @@ export default function LessonQuestionsScreen() {
   const isLastQuestion = questions.length > 0 && currentIndex === questions.length - 1;
   const hasPassed = !!result && result.progress.passed;
   const hasFailed = !!result && !result.progress.passed;
-  const showRetryButton = !!result && result.quiz.score < 100;
+  const hasPerfectScore =
+    !!result && result.quiz.correct_answers === result.quiz.total_questions;
+  const showRetryButton = !!result && !hasPerfectScore;
   const answeredCount = useMemo(() => Object.keys(answersByQuestion).length, [answersByQuestion]);
   const hasInProgressAnswers = answeredCount > 0 && !result;
   const nextProgressTarget = useMemo(() => {
@@ -363,7 +365,7 @@ export default function LessonQuestionsScreen() {
 
                     <View style={styles.actionsRow}>
                       {showRetryButton ? (
-                        <Pressable onPress={resetAttempt} style={styles.secondaryButton}>
+                        <Pressable onPress={resetAttempt} style={[styles.secondaryButton, styles.retryButtonCompact]}>
                           <Text style={styles.secondaryButtonText}>Refazer</Text>
                         </Pressable>
                       ) : (
@@ -373,7 +375,7 @@ export default function LessonQuestionsScreen() {
                       )}
 
                       {showNextButton ? (
-                        <Pressable onPress={handleContinueAfterPass} style={styles.primaryButton}>
+                        <Pressable onPress={handleContinueAfterPass} style={[styles.primaryButton, styles.nextButtonLarge]}>
                           <Text style={styles.primaryButtonText}>{nextProgressTarget?.label ?? "Voltar"}</Text>
                         </Pressable>
                       ) : null}
@@ -818,6 +820,10 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: 14,
   },
+  nextButtonLarge: {
+    minWidth: 178,
+    paddingHorizontal: 20,
+  },
   primaryButtonDisabled: {
     backgroundColor: palette.slate300,
   },
@@ -850,6 +856,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 12,
     paddingHorizontal: 14,
+  },
+  retryButtonCompact: {
+    flex: 0,
+    minWidth: 120,
   },
   secondaryButtonText: {
     color: palette.blue700,
