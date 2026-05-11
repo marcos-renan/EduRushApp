@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError, type AxiosRequestConfig } from "axios";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
@@ -55,6 +55,10 @@ const expoHost = resolveExpoDevHost();
 
 function buildBaseUrlCandidates() {
   const candidates: string[] = [];
+  const fallbackHosts = (process.env.EXPO_PUBLIC_API_FALLBACK_HOSTS ?? "")
+    .split(",")
+    .map((host: string) => host.trim())
+    .filter(Boolean);
 
   if (isConfiguredBaseUrl(configuredBaseUrl)) {
     candidates.push(configuredBaseUrl!.replace(/\/+$/, ""));
@@ -76,6 +80,17 @@ function buildBaseUrlCandidates() {
       buildBaseUrl({
         scheme: apiScheme,
         host: configuredHost,
+        port: apiPort,
+        prefix: apiPrefix,
+      })
+    );
+  }
+
+  for (const fallbackHost of fallbackHosts) {
+    candidates.push(
+      buildBaseUrl({
+        scheme: apiScheme,
+        host: fallbackHost,
         port: apiPort,
         prefix: apiPrefix,
       })
@@ -116,10 +131,23 @@ function buildBaseUrlCandidates() {
 const apiBaseUrlCandidates = buildBaseUrlCandidates();
 let resolvedApiBaseUrl: string | null = null;
 let resolveApiBaseUrlPromise: Promise<string> | null = null;
+let isDeviceOnline = true;
+
+const healthTimeoutMs = Number(process.env.EXPO_PUBLIC_API_HEALTH_TIMEOUT_MS ?? "1500");
+const retryAttempts = Number(process.env.EXPO_PUBLIC_API_RETRY_ATTEMPTS ?? "2");
+const retryBaseDelayMs = Number(process.env.EXPO_PUBLIC_API_RETRY_BASE_DELAY_MS ?? "400");
+const retryMaxDelayMs = Number(process.env.EXPO_PUBLIC_API_RETRY_MAX_DELAY_MS ?? "1800");
+
+type RetryConfig = AxiosRequestConfig & {
+  __retryCount?: number;
+};
 
 async function isHealthEndpointReachable(baseUrl: string) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 1500);
+  const timeout = setTimeout(
+    () => controller.abort(),
+    Number.isFinite(healthTimeoutMs) ? healthTimeoutMs : 1500
+  );
 
   try {
     const response = await fetch(`${baseUrl}/health`, {
@@ -149,7 +177,12 @@ async function discoverApiBaseUrl() {
   return apiBaseUrlCandidates[0];
 }
 
-async function ensureApiBaseUrl() {
+async function ensureApiBaseUrl(forceRefresh = false) {
+  if (forceRefresh) {
+    resolvedApiBaseUrl = null;
+    resolveApiBaseUrlPromise = null;
+  }
+
   if (resolvedApiBaseUrl) {
     return resolvedApiBaseUrl;
   }
@@ -176,6 +209,36 @@ export const api = axios.create({
   },
 });
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getRetryDelay(attempt: number) {
+  const exp = retryBaseDelayMs * 2 ** Math.max(0, attempt - 1);
+  return Math.min(exp, retryMaxDelayMs);
+}
+
+function canRetryMethod(method: string | undefined) {
+  if (!method) return true;
+  return ["get", "head", "options", "put"].includes(method.toLowerCase());
+}
+
+function isRetryableStatus(status: number | undefined) {
+  if (!status) return false;
+  return [408, 429, 500, 502, 503, 504].includes(status);
+}
+
+function shouldRetry(error: AxiosError, config: RetryConfig) {
+  if (!isDeviceOnline) return false;
+  if (!canRetryMethod(config.method)) return false;
+
+  const currentRetryCount = config.__retryCount ?? 0;
+  if (currentRetryCount >= retryAttempts) return false;
+
+  if (!error.response) return true;
+  return isRetryableStatus(error.response.status);
+}
+
 export function resolveApiAssetUrl(pathOrUrl: string | null | undefined): string | null {
   if (!pathOrUrl) return null;
 
@@ -201,6 +264,10 @@ export function resolveApiAssetUrl(pathOrUrl: string | null | undefined): string
 }
 
 api.interceptors.request.use(async (config) => {
+  if (!isDeviceOnline) {
+    return Promise.reject(new Error("OFFLINE_DEVICE"));
+  }
+
   const discoveredBaseUrl = await ensureApiBaseUrl();
   api.defaults.baseURL = discoveredBaseUrl;
   config.baseURL = discoveredBaseUrl;
@@ -219,15 +286,43 @@ if (apiDebug) {
       console.log(`[API] ${response.status} ${response.config.url}`);
       return response;
     },
-    (error) => {
+    async (error) => {
       console.log(`[API] ERROR ${error?.response?.status ?? "NO_RESPONSE"} ${error?.config?.url ?? ""}`);
+      const config = (error?.config ?? {}) as RetryConfig;
+      const normalizedError = error as AxiosError;
+
+      if (shouldRetry(normalizedError, config)) {
+        config.__retryCount = (config.__retryCount ?? 0) + 1;
+        const delay = getRetryDelay(config.__retryCount);
+        const fallbackBaseUrl = await ensureApiBaseUrl(!normalizedError.response);
+        config.baseURL = fallbackBaseUrl;
+        api.defaults.baseURL = fallbackBaseUrl;
+        await sleep(delay);
+        return api.request(config);
+      }
+
       return Promise.reject(error);
     }
   );
 } else {
   api.interceptors.response.use(
     (response) => response,
-    (error) => Promise.reject(error)
+    async (error) => {
+      const config = (error?.config ?? {}) as RetryConfig;
+      const normalizedError = error as AxiosError;
+
+      if (shouldRetry(normalizedError, config)) {
+        config.__retryCount = (config.__retryCount ?? 0) + 1;
+        const delay = getRetryDelay(config.__retryCount);
+        const fallbackBaseUrl = await ensureApiBaseUrl(!normalizedError.response);
+        config.baseURL = fallbackBaseUrl;
+        api.defaults.baseURL = fallbackBaseUrl;
+        await sleep(delay);
+        return api.request(config);
+      }
+
+      return Promise.reject(error);
+    }
   );
 }
 
@@ -241,6 +336,10 @@ export async function primeApiBaseUrl() {
   return baseUrl;
 }
 
+export function setDeviceOnlineStatus(isOnline: boolean) {
+  isDeviceOnline = isOnline;
+}
+
 if (apiDebug) {
   void primeApiBaseUrl().then((baseUrl) => {
     console.log(`[API] Base URL resolvida automaticamente: ${baseUrl}`);
@@ -250,6 +349,10 @@ if (apiDebug) {
 }
 
 export function extractApiError(error: unknown): string {
+  if (error instanceof Error && error.message === "OFFLINE_DEVICE") {
+    return "Você está sem internet. Verifique sua conexão e tente novamente.";
+  }
+
   if (axios.isAxiosError(error)) {
     const message = (error.response?.data as { message?: string } | undefined)?.message;
     if (message) return message;
@@ -268,6 +371,26 @@ export function extractApiError(error: unknown): string {
     if (!error.response) {
       return `Não foi possível conectar com a API Laravel (${getApiBaseUrl()}).`;
     }
+
+    if (error.response.status === 401) {
+      return "Sua sessão expirou. Faça login novamente.";
+    }
+
+    if (error.response.status === 403) {
+      return "Você não tem permissão para acessar este recurso.";
+    }
+
+    if (error.response.status === 404) {
+      return "Recurso não encontrado.";
+    }
+
+    if (error.response.status === 429) {
+      return "Muitas tentativas em sequência. Aguarde um momento e tente novamente.";
+    }
+
+    if (error.response.status >= 500) {
+      return "A API está instável no momento. Tente novamente em instantes.";
+    }
   }
 
   return "Ocorreu um erro inesperado.";
@@ -278,6 +401,14 @@ export function withAuth(token: string) {
     headers: {
       Authorization: `Bearer ${token}`,
     },
+  };
+}
+
+export function getApiConnectionDiagnostics() {
+  return {
+    activeBaseUrl: getApiBaseUrl(),
+    candidates: apiBaseUrlCandidates,
+    online: isDeviceOnline,
   };
 }
 
